@@ -1,7 +1,7 @@
 # DEPLOYMENT.md - Video Agent v1.2 P0 Real Publisher APIs
 
 ## Scope
-v1.2 P0: Deployment foundation + Real Publisher adapters (implementation-ready, Evidence Gate enforced)
+v1.2 P0.4: Deployment foundation + real TikTok/YouTube transport + hardened Meta boundary
 No fake PUBLISHED, no fake receipts.
 
 ## Source of Truth
@@ -23,8 +23,8 @@ This architecture is LOCKED, cannot be replaced.
 - Media: MP4/MOV/WebM, up to 4GB, up to 10 min, 9:16 recommended, chunked 5-64MB sequential max 1000 chunks
 - PULL_FROM_URL: Requires verified domain, HTTPS, no redirects
 - Rate: 6 req/min per token on init, 30 req/min on status, ~15-20 posts/day per creator
-- State: REQUESTED->SUBMITTED->PLATFORM_RESPONSE (publish_id)->RECEIPT_VERIFIED (video_id via status fetch)->PUBLISHED
-- Receipt: publish_id + video_id from /status/fetch/ PUBLISH_COMPLETE
+- State: REQUESTED->SUBMITTED->PLATFORM_RESPONSE (publish_id)->RECEIPT_VERIFIED only when post_id is present->PUBLISHED; PUBLISH_COMPLETE without post_id remains PENDING_VERIFICATION
+- Receipt: publish_id plus publicly_available_post_id when TikTok provides it
 - App Review: 5-10 business days, demo video, privacy policy, business entity required
 - Evidence Gate: No publish_id + video_id = FAILED, never PUBLISHED
 - Blocker: Needs TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET, TIKTOK_ACCESS_TOKEN (OAuth), domain verification for PULL_FROM_URL
@@ -35,9 +35,9 @@ This architecture is LOCKED, cannot be replaced.
 - Scope: https://www.googleapis.com/auth/youtube.upload (sensitive, needs Google verification)
 - Flow: resumable init -> Location header -> PUT chunks with Content-Range -> response id (videoId)
 - Verify: GET /youtube/v3/videos? id=videoId & part=status to check processingStatus=processed
-- Quota: 10k units/day default, 1600 per upload = 6 uploads/day max without increase
+- Quota: current Google documentation lists videos.insert at 1600 quota units; verify the project quota in Google Cloud before production volume
 - Critical: Unverified projects after July 28 2020 forced to PRIVATE - cannot upload public until verified
-- State: REQUESTED->SUBMITTED->PLATFORM_RESPONSE (Location)->RECEIPT_VERIFIED (videoId)->PUBLISHED
+- State: REQUESTED->SUBMITTED->PLATFORM_RESPONSE (Location)->RECEIPT_VERIFIED (videoId + verification read)->PUBLISHED
 - Receipt: videoId (e.g. dQw4w9WgXcQ)
 - App Review: 3-5 days initial verification, domain verification, privacy policy, demo video
 - Evidence Gate: No videoId = FAILED
@@ -74,6 +74,12 @@ This architecture is LOCKED, cannot be replaced.
 - YouTube: Analytics API revenue reports (separate OAuth)
 - TikTok: Creator Fund API if available
 - Else: PENDING_VERIFICATION
+
+## Fresh CI Evidence
+- GitHub Actions run 35653974857 completed SUCCESS on 2026-09-21.
+- Meta audit: 14 visible assertions PASS.
+- TikTok/YouTube audit: 17 visible assertions PASS.
+- These are mocked/no-credential tests; they do not prove live platform publishing.
 
 ## Local Run
 cp .env.example .env
