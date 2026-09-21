@@ -120,7 +120,7 @@ def generate_video(req: GenerateRequest):
     if not story:
         raise HTTPException(404, "Story not found")
     beats = parse_story_to_beats(story)
-    return {"story_id": req.story_id, "beats": beats, "status": "queued", "character_bible_required": True}
+    return {"story_id": req.story_id, "beats": beats, "status": "PLAN_ONLY", "generation_evidence": "NOT_AVAILABLE", "character_bible_required": True}
 
 if __name__ == "__main__":
     import uvicorn
