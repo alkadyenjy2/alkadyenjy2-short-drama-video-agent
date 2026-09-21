@@ -1,6 +1,9 @@
 # STATUS.md - Single Source of Truth - Short Drama Video Agent
 
 ## CURRENT STATE (2026-09-21)
+- P1 foundation added: Trend Intelligence, Rights/Provenance Gate, Idea/URL Inbox, and platform-neutral Analytics schema.
+- P1 modules are deterministic and evidence-first; they do not fabricate live platform data or claim legal clearance.
+- P1 live connectors/production telemetry are not yet connected.
 - GitHub repo source verified.
 - MetaPublisher: P0.3 hardened; Meta scope preserved.
 - TikTokPublisher: P0.4 real Direct Post transport implemented; blocked without live OAuth credentials.
@@ -28,6 +31,12 @@
 - TikTok/YouTube audit = 17 visible PASS assertions.
 - Tests use mocked provider responses and no live credentials.
 - Docker build, Railway deployment, and live platform publishing are not claimed.
+
+## P1 AUDIT
+- `tests/test_p1_intelligence_audit.py` added with 8 deterministic assertions.
+- Trend score is explicitly a heuristic and requires observed source metrics.
+- Rights engine is an operational screening gate, not legal advice.
+- Analytics keeps unavailable metrics as `UNKNOWN`/`None`; no fabricated revenue/views.
 
 ## NEXT
 1. Run tests/test_meta_audit.py and tests/test_tiktok_youtube_audit.py in a Python environment with requests.
