@@ -340,6 +340,18 @@ class SQLiteRepository(PersistenceRepository):
                 rows.append(item)
             return rows
 
+    def close(self) -> None:
+        with self._lock:
+            if self._conn is not None:
+                self._conn.close()
+                self._conn = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.close()
+
     def health_check(self) -> bool:
         try:
             with self._lock:
@@ -347,9 +359,9 @@ class SQLiteRepository(PersistenceRepository):
                 cur.execute("SELECT 1")
                 cur.fetchone()
                 # Check tables exist
-                cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('operation_logs','video_versions','publications')")
+                cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('operation_logs','video_versions','publications','analytics_events')")
                 tables = cur.fetchall()
-                return len(tables) == 3
+                return len(tables) == 4
         except Exception:
             return False
 
