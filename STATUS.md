@@ -112,3 +112,20 @@ Still not executable without external credentials/approvals/provider access:
 4. Add ad-spend/revenue adapters where official APIs expose them.
 5. Add actual video-generation provider adapter after its API contract is available.
 6. Run live discovery/analytics only after credentials/permissions are supplied; then capture evidence IDs and timestamps.
+
+## FINAL LOCAL AUDIT — 2026-09-21
+- Desktop Commander cloned and audited the exact GitHub main revision.
+- Python compile: PASS.
+- Dependency imports (python-telegram-bot, FastAPI, Uvicorn): PASS after adding missing runtime dependencies.
+- Bot safe-catalog smoke: PASS; production trend fixture is now empty until live discovery evidence exists.
+- Web app import smoke: PASS.
+- Full deterministic audit suite: PASS — P1 8, discovery 4, idea/rights 3, analytics persistence 1, analytics adapters 2, analytics ingestion 1, learning 2, media/finance 4, Meta Ads/generation 2, repository lifecycle 1, Meta legacy audit 14, TikTok/YouTube legacy audit 17.
+- Repository lifecycle bug fixed: SQLite connections now close explicitly; analytics table is included in health checks; analytics tests close repositories.
+- Fake-success paths fixed in Telegram bot: no stale trend ranking, no fake Muse generation, no fake Preview/Approve/Publish, and edit responses are PLAN_ONLY until a real artifact exists.
+- Stale fixed-ROI dashboard/document claims removed.
+- Stale trend fixture catalog removed from production (trending_stories.json is now empty).
+- Final local working tree was clean after removing generated cache directories.
+- Latest audited main revision before this status-only commit: 5d5bcaf3fe19c018136066a7fa40fa55be4343bc.
+
+## RELEASE CANDIDATE BOUNDARY
+The codebase passes the local deterministic audit, but production runtime still requires external credentials/approvals/provider access listed above. No production deployment was performed.
