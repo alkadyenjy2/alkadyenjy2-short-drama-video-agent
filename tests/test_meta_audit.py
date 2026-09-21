@@ -1,6 +1,6 @@
 
 import os, sys
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 for k in ["META_APP_ID","META_APP_SECRET","META_PAGE_ACCESS_TOKEN","META_IG_USER_ID","META_PAGE_ID"]:
     os.environ.pop(k, None)
 from publisher import MetaPublisher, PublicationState, _classify_meta_error, _sanitize_log
