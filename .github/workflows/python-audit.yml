@@ -18,6 +18,10 @@ on:
       - "analytics_adapters.py"
       - "analytics_ingestion.py"
       - "learning_loop.py"
+      - "meta_analytics.py"
+      - "ad_revenue_schema.py"
+      - "transcription_adapter.py"
+      - "video_generation_adapter.py"
       - ".github/workflows/python-audit.yml"
 jobs:
   tests:
@@ -37,3 +41,4 @@ jobs:
       - run: python tests/test_analytics_adapters.py
       - run: python tests/test_analytics_ingestion.py
       - run: python tests/test_learning_loop.py
+      - run: python tests/test_meta_finance_media_boundaries.py
