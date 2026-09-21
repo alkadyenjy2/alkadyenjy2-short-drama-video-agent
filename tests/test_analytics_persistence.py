@@ -22,6 +22,7 @@ def test_analytics_persistence(tmp_path):
     assert rows[0]["metrics"]["views"] == 1000
     assert rows[0]["metrics"]["revenue"] == 1.25
     assert rows[0]["evidence_status"] == "OBSERVED"
+    repo.close()
 
 
 if __name__ == "__main__":
