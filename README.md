@@ -5,7 +5,7 @@
 ## Architecture
 - `bot.py` - Telegram bot + Approval Gate + Arabic edit parser + versioning v1→v2→v3
 - `visual_factory.py` - Agent Core: parse to beats, Character Bible (consistent face), prompt generation
-- `publisher.py` - P0.3 Hardened: TikTok/YouTube/Instagram/Facebook - Evidence Gate ENFORCED, no fake success
+- `publisher.py` - P0.4: real TikTok/YouTube transport + hardened Instagram/Facebook boundary - Evidence Gate ENFORCED, no fake success
 - `persistence/` - SQLite repo + migration path to Postgres
 - `main.py` + `health.py` + `web_app.py` - Deployment foundation + Dashboard
 - `trending_stories.json` - Trending stories source
