@@ -36,4 +36,4 @@
 
 ## Fresh execution boundary
 
-The repository contains a printed audit suite with mocked provider responses. The GitHub connector currently exposes no workflow status for the new push commits, and no live credentials are present. Therefore this report does not claim a fresh CI PASS for the hardened revision.
+Fresh local execution was completed on Desktop Commander device Fattouh at commit `f5b5ec8e96e4baf58b9d8957e58c7abdc5f4821f` using Python 3.14.6. `py_compile` passed and the audit suite printed `=== Summary: 30 PASS / 0 FAIL ===`. No live credentials or live publishing were used.
