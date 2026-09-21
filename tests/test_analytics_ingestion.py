@@ -19,6 +19,7 @@ def test_ingestion_creates_deterministic_event_id(tmp_path):
     rows = repo.list_analytics_events(video_id="tt1")
     assert len(rows) == 1
     assert rows[0]["metrics"]["views"] == 50
+    repo.close()
 
 
 if __name__ == "__main__":
