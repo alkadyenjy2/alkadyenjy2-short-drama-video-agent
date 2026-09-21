@@ -71,9 +71,9 @@
 
 ## CURRENT BLOCKERS
 - YouTube Data API key for public discovery.
-- TikTok Research API approval/token for public discovery; TikTok states developer account alone is insufficient and Research access requires eligibility/application/approval. citeturn4search10
-- YouTube Analytics OAuth with `yt-analytics.readonly`; monetary metrics additionally require `yt-analytics-monetary.readonly`. citeturn4search0
-- TikTok authorized user token with `video.list` for owned-video analytics. citeturn5search4
+- TikTok Research API approval/token for public discovery; TikTok states developer account alone is insufficient and Research access requires eligibility/application/approval.
+- YouTube Analytics OAuth with `yt-analytics.readonly`; monetary metrics additionally require `yt-analytics-monetary.readonly`.
+- TikTok authorized user token with `video.list` for owned-video analytics.
 - Actual video-generation provider endpoint/key.
 - Railway plan activation before production deployment.
 
