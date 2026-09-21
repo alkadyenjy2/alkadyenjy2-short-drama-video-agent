@@ -51,10 +51,8 @@ button:hover { background:#E50914; color:#fff; }
 </div>
 
 <div class="card">
-<h3 class="gold">🚀 أهم 3 منصات للعملاء (حسب تحليلنا)</h3>
-<p><b>1. TikTok (70%)</b> - أسرع نمو + Creativity Program $0.50-$1/1k views - هتجيب 100k متابع أول شهر</p>
-<p><b>2. YouTube Shorts (20%)</b> - أرباح طويلة المدى 45% + ثقة العملاء B2B</p>
-<p><b>3. Instagram Reels (10%)</b> - للبراندينج وشركات الإنتاج اللي هتدفع اشتراكات</p>
+<h3 class="gold">🧭 Platform Fit</h3>
+<p>المنصة لا يتم اختيارها بنسبة ROI ثابتة. الاختيار يعتمد على البيانات المرصودة، صلاحيات الحساب، ومتطلبات النشر.</p>
 </div>
 
 <div class="card">
