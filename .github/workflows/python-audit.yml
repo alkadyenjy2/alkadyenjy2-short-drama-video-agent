@@ -10,6 +10,9 @@ on:
       - "rights_engine.py"
       - "idea_inbox.py"
       - "analytics_schema.py"
+      - "source_adapters.py"
+      - "platform_recommender.py"
+      - "discovery_pipeline.py"
       - ".github/workflows/python-audit.yml"
 jobs:
   tests:
@@ -23,3 +26,4 @@ jobs:
       - run: python tests/test_meta_audit.py
       - run: python tests/test_tiktok_youtube_audit.py
       - run: python tests/test_p1_intelligence_audit.py
+      - run: python tests/test_discovery_pipeline.py
