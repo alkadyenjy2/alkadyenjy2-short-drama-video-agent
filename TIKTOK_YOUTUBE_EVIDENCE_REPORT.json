@@ -2,19 +2,18 @@
   "report": "TIKTOK_YOUTUBE_EVIDENCE_REPORT",
   "date": "2026-09-22",
   "source_commits": {
-    "publisher": "fe62d1f8ee278a402f9a7a82442f44c384d6bef9",
+    "publisher": "f5b5ec8e96e4baf58b9d8957e58c7abdc5f4821f",
     "env_example": "3a0096d6f41cad748c0e79438cbd603dcf81f9d9",
     "tests": "09eb99e603aefc9f7bc86b3045a25783822a1b87"
   },
   "tests_run": 30,
-  "tests_passed": null,
-  "tests_failed": null,
-  "execution_status": "NOT_FRESHLY_VERIFIED_IN_CURRENT_CONNECTOR",
+  "tests_passed": 30,
+  "tests_failed": 0,
+  "execution_status": "FRESH_LOCAL_EXECUTION_VERIFIED",
   "blockers": [
-    "No live TikTok OAuth credentials/approved scopes in repository environment",
-    "No live YouTube OAuth credentials/refresh token in repository environment",
-    "GitHub connector returned no CI status for the new push commits",
-    "Live publishing was not executed"
+    "TikTok live OAuth/app approval and verified URL properties remain external human actions",
+    "YouTube live OAuth client/consent/refresh token remains an external human action",
+    "No live platform publishing was executed"
   ],
   "evidence": [
     "TikTok official Direct Post init/creator/status endpoints are implemented in publisher.py",
@@ -26,9 +25,17 @@
     "Retry budgets are bounded at 3"
   ],
   "next_actions": [
-    "Obtain TikTok app approval/OAuth authorization and verified URL properties if PULL_FROM_URL is used",
-    "Obtain YouTube Google Cloud OAuth client/consent and refresh token",
-    "Expose or retrieve a fresh GitHub Actions run for commit 09eb99e603aefc9f7bc86b3045a25783822a1b87",
-    "Run live E2E only after credentials exist and without deployment"
-  ]
+    "Supply TikTok approved OAuth credentials in Railway/environment",
+    "Supply YouTube OAuth client/refresh token in Railway/environment",
+    "Perform live E2E only after credentials are present; do not deploy as part of this audit"
+  ],
+  "fresh_execution": {
+    "device": "Fattouh",
+    "commit": "f5b5ec8e96e4baf58b9d8957e58c7abdc5f4821f",
+    "python_version": "3.14.6",
+    "py_compile": "PASS",
+    "test_output": "=== Summary: 30 PASS / 0 FAIL ===",
+    "live_credentials_used": false,
+    "live_publish_executed": false
+  }
 }
