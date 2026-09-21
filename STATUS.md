@@ -129,3 +129,14 @@ Still not executable without external credentials/approvals/provider access:
 
 ## RELEASE CANDIDATE BOUNDARY
 The codebase passes the local deterministic audit, but production runtime still requires external credentials/approvals/provider access listed above. No production deployment was performed.
+
+## TIKTOK + YOUTUBE HARDENING — 2026-09-22
+- Fresh official-doc audit completed against current TikTok and YouTube documentation.
+- TikTok hardened: credential gate returns `BLOCKED_CREDENTIALS`; explicit error taxonomy; bounded max-3 retry; token sanitization; deterministic platform idempotency key; evidence fields completed; Direct Post receipt requires `PUBLISH_COMPLETE` plus `publicaly_available_post_id`.
+- TikTok OAuth refresh helper added; current TikTok documentation says refresh tokens can rotate, so the returned replacement must be persisted by the external credential layer.
+- TikTok FILE_UPLOAD now enforces the current 4GB/1000-chunk boundary and sequential Content-Range transfer rules. PULL_FROM_URL remains dependent on TikTok URL/domain verification.
+- YouTube hardened: credential gate; explicit `youtube.upload` scope constant; resumable Location gate; chunk-level retry; bounded retry count; token sanitization; deterministic platform idempotency key.
+- YouTube verification now polls `videos.list` with `status,processingDetails` and only reaches `PUBLISHED` after a real `videoId`, processed state, and matching requested privacy status.
+- Important current-doc correction: the old 1600-unit `videos.insert` quota assumption is stale. Current Google documentation uses a separate 100-calls/day `videos.insert` bucket at 1 unit/call; other methods use the general quota bucket.
+- The user-requested test suite now contains 20 printed assertions, but the GitHub connector has not exposed a fresh Actions result for the new push commit. No fresh PASS is claimed.
+- MetaPublisher, Meta state, Meta persistence, and Meta architecture were not modified by this hardening patch.
