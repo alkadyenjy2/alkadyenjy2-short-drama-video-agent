@@ -58,25 +58,40 @@ async def main():
         print(f"FATAL: Bot init failed: {e}")
         raise
     
-    # 4. Graceful shutdown
+    # 4. Start Telegram polling and keep the service alive.
+    stop_event = asyncio.Event()
+
     def handle_shutdown(signum, frame):
         print(f"Received signal {signum}, shutting down gracefully...")
-        health_server.shutdown()
-        # application.stop() would be called in real polling loop
-    
+        stop_event.set()
+
     signal.signal(signal.SIGINT, handle_shutdown)
     signal.signal(signal.SIGTERM, handle_shutdown)
-    
+
+    print("Initializing Telegram polling...")
+    await application.initialize()
+    await application.start()
+    if application.updater is None:
+        raise RuntimeError("Telegram updater is unavailable; cannot start polling")
+    await application.updater.start_polling()
     print("=== Video Agent v1.2 Ready ===")
     print("Health: GET /health")
-    print("Bot: polling mode (for production, run with polling or webhook)")
+    print("Bot: Telegram polling active")
     print("Persistence: SQLite local - migration path to Postgres in DEPLOYMENT.md")
-    print("Publisher: Evidence Gate enforced - no real APIs yet")
-    
-    # For v1.2 foundation, we don't start polling indefinitely in this demo
-    # Production would: await application.initialize(); await application.start(); await application.updater.start_polling()
-    # For testing, we just verify init works
-    return {"repo": repo, "health_server": health_server, "application": application}
+    print("Publisher: Evidence Gate enforced")
+
+    try:
+        await stop_event.wait()
+    finally:
+        if application.updater and application.updater.running:
+            await application.updater.stop()
+        await application.stop()
+        await application.shutdown()
+        health_server.shutdown()
+        if hasattr(repo, "close"):
+            repo.close()
+
+    return {"status": "STOPPED"}
 
 if __name__ == "__main__":
     asyncio.run(main())
