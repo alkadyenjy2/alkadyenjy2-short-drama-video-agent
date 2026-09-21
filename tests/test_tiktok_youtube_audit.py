@@ -167,3 +167,5 @@ requests.post = real_post
 
 print(f"=== Summary: {passed} PASS / {failed} FAIL ===")
 assert failed == 0
+
+# Fresh CI trigger: no production behavior change.
