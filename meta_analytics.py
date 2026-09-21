@@ -18,7 +18,7 @@ class MetaAnalyticsAccessError(RuntimeError):
 class MetaInsightsAdapter:
     def __init__(self, access_token: Optional[str] = None, graph_version: Optional[str] = None, timeout: int = 30):
         self.access_token = access_token or os.getenv("META_PAGE_ACCESS_TOKEN")
-        self.graph_version = graph_version or os.getenv("META_GRAPH_VERSION", "v23.0")
+        self.graph_version = graph_version or os.getenv("META_GRAPH_VERSION", "v26.0")
         self.timeout = timeout
 
     def _get(self, object_id: str, params: Dict) -> Dict:
