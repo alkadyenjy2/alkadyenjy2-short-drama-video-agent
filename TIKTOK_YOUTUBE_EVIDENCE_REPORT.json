@@ -1,41 +1,34 @@
 {
   "report": "TIKTOK_YOUTUBE_EVIDENCE_REPORT",
-  "date": "2026-09-21",
-  "source_commit": "690ff991379e77289112f0a064dd0d6cda09c51e",
-  "ci_run": 35653974857,
-  "ci_conclusion": "success",
-  "fresh_execution": {
-    "meta_visible_pass_assertions": 14,
-    "tiktok_youtube_visible_pass_assertions": 17,
-    "live_credentials_used": false,
-    "live_publish_executed": false
+  "date": "2026-09-22",
+  "source_commits": {
+    "publisher": "fe62d1f8ee278a402f9a7a82442f44c384d6bef9",
+    "env_example": "3a0096d6f41cad748c0e79438cbd603dcf81f9d9",
+    "tests": "09eb99e603aefc9f7bc86b3045a25783822a1b87"
   },
-  "tiktok": {
-    "implementation": "real Direct Post transport",
-    "endpoints": [
-      "https://open.tiktokapis.com/v2/post/publish/creator_info/query/",
-      "https://open.tiktokapis.com/v2/post/publish/video/init/",
-      "https://open.tiktokapis.com/v2/post/publish/status/fetch/"
-    ],
-    "evidence_gate": "No post_id receipt = not PUBLISHED",
-    "file_upload": "Sequential chunks with Content-Range",
-    "pull_from_url": "HTTPS + verified domain requirement",
-    "human_blockers": ["OAuth video.publish", "developer app audit for public posting", "domain verification for PULL_FROM_URL"]
-  },
-  "youtube": {
-    "implementation": "real OAuth + resumable upload transport",
-    "endpoints": [
-      "https://oauth2.googleapis.com/token",
-      "https://www.googleapis.com/upload/youtube/v3/videos",
-      "https://www.googleapis.com/youtube/v3/videos"
-    ],
-    "evidence_gate": "No verified videoId = not PUBLISHED",
-    "privacy_default": "private",
-    "human_blockers": ["Google Cloud OAuth client", "user consent/refresh token", "production verification for public visibility"]
-  },
-  "meta_boundary": "MetaPublisher was not changed by the TikTok/YouTube implementation patch.",
-  "deployment": {
-    "railway": "blocked by plan activation",
-    "live_e2e": "blocked until platform credentials are supplied in deployment environment"
-  }
+  "tests_run": 20,
+  "tests_passed": null,
+  "tests_failed": null,
+  "execution_status": "NOT_FRESHLY_VERIFIED_IN_CURRENT_CONNECTOR",
+  "blockers": [
+    "No live TikTok OAuth credentials/approved scopes in repository environment",
+    "No live YouTube OAuth credentials/refresh token in repository environment",
+    "GitHub connector returned no CI status for the new push commits",
+    "Live publishing was not executed"
+  ],
+  "evidence": [
+    "TikTok official Direct Post init/creator/status endpoints are implemented in publisher.py",
+    "TikTok PUBLISHED requires PUBLISH_COMPLETE plus publicly available post_id receipt",
+    "YouTube PUBLISHED requires videoId plus videos.list verification of processed status and requested privacy",
+    "HTTP 200 alone is rejected as publication proof",
+    "Evidence records include operation_id, video_id, platform, request_timestamp, provider_object_id, publish_id, status_code, terminal_status, evidence_status, retry_count, idempotency_key",
+    "Sensitive token sanitization is implemented",
+    "Retry budgets are bounded at 3"
+  ],
+  "next_actions": [
+    "Obtain TikTok app approval/OAuth authorization and verified URL properties if PULL_FROM_URL is used",
+    "Obtain YouTube Google Cloud OAuth client/consent and refresh token",
+    "Expose or retrieve a fresh GitHub Actions run for commit 09eb99e603aefc9f7bc86b3045a25783822a1b87",
+    "Run live E2E only after credentials exist and without deployment"
+  ]
 }
