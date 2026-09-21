@@ -72,8 +72,8 @@ def _classify_meta_error(error_code: Optional[int], error_subcode: Optional[int]
     return ("unknown_provider_response", False)
 
 class MetaPublisher:
-    SUPPORTED_VERSIONS = ["v21.0", "v22.0", "v23.0", "v24.0"]
-    DEFAULT_VERSION = "v21.0"
+    SUPPORTED_VERSIONS = ["v21.0", "v22.0", "v26.0", "v24.0"]
+    DEFAULT_VERSION = "v26.0"
     def __init__(self, platform: str = "instagram"):
         self.platform = platform.lower()
         self.app_id = os.getenv("META_APP_ID")
