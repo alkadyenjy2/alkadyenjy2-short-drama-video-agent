@@ -1,0 +1,41 @@
+{
+  "report": "TIKTOK_YOUTUBE_EVIDENCE_REPORT",
+  "date": "2026-09-21",
+  "source_commit": "690ff991379e77289112f0a064dd0d6cda09c51e",
+  "ci_run": 35653974857,
+  "ci_conclusion": "success",
+  "fresh_execution": {
+    "meta_visible_pass_assertions": 14,
+    "tiktok_youtube_visible_pass_assertions": 17,
+    "live_credentials_used": false,
+    "live_publish_executed": false
+  },
+  "tiktok": {
+    "implementation": "real Direct Post transport",
+    "endpoints": [
+      "https://open.tiktokapis.com/v2/post/publish/creator_info/query/",
+      "https://open.tiktokapis.com/v2/post/publish/video/init/",
+      "https://open.tiktokapis.com/v2/post/publish/status/fetch/"
+    ],
+    "evidence_gate": "No post_id receipt = not PUBLISHED",
+    "file_upload": "Sequential chunks with Content-Range",
+    "pull_from_url": "HTTPS + verified domain requirement",
+    "human_blockers": ["OAuth video.publish", "developer app audit for public posting", "domain verification for PULL_FROM_URL"]
+  },
+  "youtube": {
+    "implementation": "real OAuth + resumable upload transport",
+    "endpoints": [
+      "https://oauth2.googleapis.com/token",
+      "https://www.googleapis.com/upload/youtube/v3/videos",
+      "https://www.googleapis.com/youtube/v3/videos"
+    ],
+    "evidence_gate": "No verified videoId = not PUBLISHED",
+    "privacy_default": "private",
+    "human_blockers": ["Google Cloud OAuth client", "user consent/refresh token", "production verification for public visibility"]
+  },
+  "meta_boundary": "MetaPublisher was not changed by the TikTok/YouTube implementation patch.",
+  "deployment": {
+    "railway": "blocked by plan activation",
+    "live_e2e": "blocked until platform credentials are supplied in deployment environment"
+  }
+}
