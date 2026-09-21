@@ -38,8 +38,21 @@
 - Rights engine is an operational screening gate, not legal advice.
 - Analytics keeps unavailable metrics as `UNKNOWN`/`None`; no fabricated revenue/views.
 
+## P1.1 DISCOVERY PIPELINE
+- Added SourceAdapter -> Fetch -> Normalize -> Trend Rank -> Rights Gate -> Platform Fit orchestration.
+- YouTube adapter uses the official Data API search.list + videos.list flow and fails closed without `YOUTUBE_DATA_API_KEY`.
+- TikTok adapter targets the official Research API video query and fails closed without `TIKTOK_RESEARCH_ACCESS_TOKEN`.
+- No live platform data is fabricated; access failures are surfaced as `ACCESS_REQUIRED`.
+- Platform fit is descriptive and constraint-based, not a performance guarantee.
+
+## FRESH EXECUTION STATUS
+- P1.1 commits added to `main`: `dc90297240549777eb870008fea0d6ab92291d8d`, `1eb8bc64775696c8d1768b83703d0e9d97075f26`, `b632ee48710ada1391cf4db8a1ea526bab437d91`, `445ddb833174258390cb873de8f63b9b846ca26f`.
+- These commit SHAs prove repository writes only; they do not prove CI success.
+
 ## NEXT
-1. Run tests/test_meta_audit.py and tests/test_tiktok_youtube_audit.py in a Python environment with requests.
-2. Fix any runtime failures from fresh execution.
-3. Add secrets only to deployment environment.
-4. Run controlled SELF_ONLY/private E2E and capture real receipts.
+1. Verify the fresh GitHub Actions run for P1/P1.1.
+2. Add URL fetch/transcription for Idea Inbox.
+3. Add platform-specific rights-policy evidence.
+4. Add analytics persistence and live ingestion.
+5. Add ads/revenue and learning loop.
+6. Run controlled SELF_ONLY/private E2E and capture real receipts.
