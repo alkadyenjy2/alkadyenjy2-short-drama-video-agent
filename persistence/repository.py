@@ -47,6 +47,12 @@ class PersistenceRepository(ABC):
     def list_publications(self, video_id: Optional[str] = None) -> List[Dict]: ...
     
     @abstractmethod
+    def create_analytics_event(self, event: Dict) -> Dict: ...
+    
+    @abstractmethod
+    def list_analytics_events(self, video_id: Optional[str] = None, platform: Optional[str] = None) -> List[Dict]: ...
+    
+    @abstractmethod
     def health_check(self) -> bool: ...
 
 # === SQLITE IMPLEMENTATION ===
@@ -121,6 +127,24 @@ class SQLiteRepository(PersistenceRepository):
             cur.execute("CREATE INDEX IF NOT EXISTS idx_publications_video_id ON publications(video_id);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_publications_state ON publications(state);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_publications_created_at ON publications(created_at);")
+            
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS analytics_events (
+                    event_id TEXT PRIMARY KEY,
+                    video_id TEXT NOT NULL,
+                    publication_id TEXT,
+                    platform TEXT NOT NULL,
+                    observed_at TEXT NOT NULL,
+                    source_url TEXT,
+                    metrics TEXT NOT NULL,
+                    currency TEXT,
+                    attribution_window TEXT,
+                    evidence_status TEXT NOT NULL
+                );
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_analytics_video_id ON analytics_events(video_id);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_analytics_platform ON analytics_events(platform);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_analytics_observed_at ON analytics_events(observed_at);")
     
     def create_operation_log(self, log: Dict) -> Dict:
         with self._lock:
@@ -281,6 +305,41 @@ class SQLiteRepository(PersistenceRepository):
                 result.append(d)
             return result
     
+    def create_analytics_event(self, event: Dict) -> Dict:
+        with self._lock:
+            cur = self._conn.cursor()
+            cur.execute("""
+                INSERT OR REPLACE INTO analytics_events
+                (event_id, video_id, publication_id, platform, observed_at, source_url, metrics, currency, attribution_window, evidence_status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                event["event_id"], event["video_id"], event.get("publication_id"), event["platform"],
+                event["observed_at"], event.get("source_url", ""), json.dumps(event.get("metrics", {})),
+                event.get("currency"), event.get("attribution_window"), event.get("evidence_status", "UNKNOWN")
+            ))
+            return event
+
+    def list_analytics_events(self, video_id: Optional[str] = None, platform: Optional[str] = None) -> List[Dict]:
+        with self._lock:
+            cur = self._conn.cursor()
+            if video_id and platform:
+                cur.execute("SELECT * FROM analytics_events WHERE video_id = ? AND platform = ? ORDER BY observed_at DESC", (video_id, platform))
+            elif video_id:
+                cur.execute("SELECT * FROM analytics_events WHERE video_id = ? ORDER BY observed_at DESC", (video_id,))
+            elif platform:
+                cur.execute("SELECT * FROM analytics_events WHERE platform = ? ORDER BY observed_at DESC", (platform,))
+            else:
+                cur.execute("SELECT * FROM analytics_events ORDER BY observed_at DESC")
+            rows = []
+            for row in cur.fetchall():
+                item = dict(row)
+                try:
+                    item["metrics"] = json.loads(item["metrics"])
+                except Exception:
+                    item["metrics"] = {}
+                rows.append(item)
+            return rows
+
     def health_check(self) -> bool:
         try:
             with self._lock:
