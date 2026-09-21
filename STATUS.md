@@ -138,5 +138,5 @@ The codebase passes the local deterministic audit, but production runtime still 
 - YouTube hardened: credential gate; explicit `youtube.upload` scope constant; resumable Location gate; chunk-level retry; bounded retry count; token sanitization; deterministic platform idempotency key.
 - YouTube verification now polls `videos.list` with `status,processingDetails` and only reaches `PUBLISHED` after a real `videoId`, processed state, and matching requested privacy status.
 - Important current-doc correction: the old 1600-unit `videos.insert` quota assumption is stale. Current Google documentation uses a separate 100-calls/day `videos.insert` bucket at 1 unit/call; other methods use the general quota bucket.
-- The user-requested test suite now contains 20 printed assertions, but the GitHub connector has not exposed a fresh Actions result for the new push commit. No fresh PASS is claimed.
+- The user-requested test suite now contains 30 printed assertions, but the GitHub connector has not exposed a fresh Actions result for the new push commit. No fresh PASS is claimed.
 - MetaPublisher, Meta state, Meta persistence, and Meta architecture were not modified by this hardening patch.
