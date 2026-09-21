@@ -17,6 +17,7 @@ on:
       - "rights_policy_evidence.py"
       - "analytics_adapters.py"
       - "analytics_ingestion.py"
+      - "learning_loop.py"
       - ".github/workflows/python-audit.yml"
 jobs:
   tests:
@@ -35,3 +36,4 @@ jobs:
       - run: python tests/test_analytics_persistence.py
       - run: python tests/test_analytics_adapters.py
       - run: python tests/test_analytics_ingestion.py
+      - run: python tests/test_learning_loop.py
