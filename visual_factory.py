@@ -90,7 +90,7 @@ def create_visual_job(beat: Dict, user_id: str, publication_id: str, character_b
         "created_at": datetime.utcnow().isoformat() + "Z",
         "prompt": final_prompt,
         "negative_prompt": "blurry, distorted face, inconsistent character, watermark, low quality, 16:9 horizontal",
-        "model": "muse-video-v1",  # placeholder for actual Muse endpoint
+        "model": os.getenv("VIDEO_GENERATION_PROVIDER", "UNCONFIGURED"),
         "aspect_ratio": "9:16",
         "duration_sec": beat["duration_sec"],
         "character_bible_id": character_bible_id,
@@ -122,6 +122,7 @@ def get_agent_status():
         "supported_duration": "40-60 sec per beat, 3-5 beats per story",
         "edit_operations_supported": ["lighting darker/brighter", "trim/cut", "caption/title", "speed faster/slower", "colors/filter", "background/zoom"],
         "language": "Arabic comments understanding - اضاءة اغمق قص كابشن اسرع ابطأ",
-        "muse_integration": "Prompt generation ready, API call requires MUSE_API_KEY env",
-        "next_step": "Connect to actual Muse Video endpoint when available"
+        "muse_integration": "PROMPT_ONLY_UNTIL_PROVIDER_CONFIGURED",
+        "video_generation_provider": os.getenv("VIDEO_GENERATION_PROVIDER", "UNCONFIGURED"),
+        "next_step": "Configure VIDEO_GENERATION_API_URL + VIDEO_GENERATION_API_KEY or a concrete provider adapter"
     }
