@@ -24,10 +24,7 @@ python web_app.py  # marketing dashboard
 - receipt=None → FAILED, never PUBLISHED
 - HTTP 200 is NOT proof of publication
 - No secrets in logs (EAA_REDACTED)
-
-## Platforms ROI
-1. TikTok 70% - fastest growth + Creativity Program
-2. YouTube Shorts 20% - long-term revenue 45%
-3. Instagram Reels 10% - B2B clients
+## Platform selection
+Platform fit is now generated from observed metrics, account access, and platform requirements in `platform_recommender.py`. No fixed ROI percentages are treated as facts.
 
 See STATUS.md for current state.
