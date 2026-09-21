@@ -55,10 +55,32 @@
 - Added platform-specific policy evidence for YouTube, TikTok, Instagram, and Facebook with official source URLs.
 - YouTube permission does not automatically clear monetization review; reused-content policy is tracked separately.
 
+## P1.3 ANALYTICS + LEARNING
+- Added SQLite persistence for analytics events with deterministic event IDs.
+- Added authorized YouTube Analytics ingestion for views/engagement/watch time and optional revenue metrics.
+- Added authorized TikTok Display API ingestion for recent owned/public video snapshots.
+- Added a deterministic learning loop that converts observed performance into reusable selection features without inventing missing metrics.
+- YouTube Analytics monetary metrics require the appropriate OAuth scope; TikTok access requires the applicable Login Kit/API permissions.
+
+## VERIFIED IMPLEMENTATION BOUNDARY
+- Discovery is now real-API capable for YouTube Data API and TikTok Research API, but credentials/approvals are not present in the repository and live calls were not executed.
+- URL ingestion is implemented for public HTML metadata/text; transcription remains an explicit provider boundary.
+- Rights screening is fail-closed and backed by official policy evidence; it is not legal clearance.
+- Platform recommendation is rule-based fit, not a guaranteed performance prediction.
+- Analytics persistence and learning logic are implemented; no live analytics execution is claimed.
+
+## CURRENT BLOCKERS
+- YouTube Data API key for public discovery.
+- TikTok Research API approval/token for public discovery; TikTok states developer account alone is insufficient and Research access requires eligibility/application/approval. citeturn4search10
+- YouTube Analytics OAuth with `yt-analytics.readonly`; monetary metrics additionally require `yt-analytics-monetary.readonly`. citeturn4search0
+- TikTok authorized user token with `video.list` for owned-video analytics. citeturn5search4
+- Actual video-generation provider endpoint/key.
+- Railway plan activation before production deployment.
+
 ## NEXT
-1. Verify the fresh GitHub Actions run for P1/P1.2.
-2. Add analytics persistence and live ingestion.
-3. Add ads/revenue schemas and ingestion.
-4. Add performance learning loop.
-5. Add actual video-generation adapter.
-6. Run controlled SELF_ONLY/private E2E and capture real receipts.
+1. Verify fresh CI execution when the GitHub Actions push run is exposed by the connector.
+2. Add a concrete transcription provider behind the existing boundary.
+3. Add Meta analytics ingestion.
+4. Add ad-spend/revenue adapters where official APIs expose them.
+5. Add actual video-generation provider adapter after its API contract is available.
+6. Run live discovery/analytics only after credentials/permissions are supplied; then capture evidence IDs and timestamps.
