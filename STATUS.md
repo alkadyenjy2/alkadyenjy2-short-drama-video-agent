@@ -77,6 +77,34 @@
 - Actual video-generation provider endpoint/key.
 - Railway plan activation before production deployment.
 
+## P1.4 META ADS + GENERATION BOUNDARY
+- Added Meta Graph/Marketing API adapters with explicit credential gates.
+- Meta Graph default moved to v26.0 and remains configurable.
+- Added Meta Ads Insights normalization for observed spend and attribution values; conversion/action values are not silently relabeled as business revenue.
+- Added a generic authenticated HTTP video-generation adapter. It accepts only an explicit provider contract and real artifact evidence.
+- Existing visual factory is now explicitly PROMPT_ONLY_UNTIL_PROVIDER_CONFIGURED; it no longer presents the placeholder Muse model as a real generator.
+- Dashboard fake ROI/profit claims were removed. /generate now returns PLAN_ONLY until a real generation artifact exists.
+- Railway was checked again: only natural-success and innovative-clarity are accessible; no Short Drama service/project exists, so no deployment was attempted.
+
+## FRESH EXTERNAL RESEARCH
+- TikTok Direct Post currently requires video.publish; unaudited clients are restricted to private viewing until audit.
+- TikTok Display API currently requires video.list plus Login Kit/API product approval for authorized user video access.
+- TikTok Research API requires an approved research project/client credentials.
+- YouTube Analytics monetary metrics require the monetary readonly scope and applicable monetization access; Analytics processing can lag real-time Data API statistics.
+- Meta Graph API v26.0 is current in the researched September 2026 version list; Marketing API versioning is separately versioned.
+
+## FINAL IMPLEMENTATION BOUNDARY
+Discovery -> Trend scoring -> Idea Inbox -> URL evidence fetch -> Rights screening -> Platform fit -> Story/beat planning -> Generation contract -> Approval -> Publisher Evidence Gate -> Analytics -> Ad spend/revenue normalization -> Learning signals.
+
+Still not executable without external credentials/approvals/provider access:
+- YouTube Data API key
+- TikTok Research approval/token
+- TikTok Login/API approval + user authorization
+- YouTube Analytics OAuth
+- Meta access/permissions
+- actual video-generation provider endpoint/key
+- Railway billing/plan activation
+
 ## NEXT
 1. Verify fresh CI execution when the GitHub Actions push run is exposed by the connector.
 2. Add a concrete transcription provider behind the existing boundary.
