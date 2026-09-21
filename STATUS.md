@@ -49,10 +49,16 @@
 - P1.1 commits added to `main`: `dc90297240549777eb870008fea0d6ab92291d8d`, `1eb8bc64775696c8d1768b83703d0e9d97075f26`, `b632ee48710ada1391cf4db8a1ea526bab437d91`, `445ddb833174258390cb873de8f63b9b846ca26f`.
 - These commit SHAs prove repository writes only; they do not prove CI success.
 
+## P1.2 SOURCE INGESTION + POLICY EVIDENCE
+- Added public URL metadata/text fetcher for Idea Inbox; it does not download or republish third-party media.
+- Transcript state remains `NOT_AVAILABLE` until a real transcript provider or user-supplied transcript is present.
+- Added platform-specific policy evidence for YouTube, TikTok, Instagram, and Facebook with official source URLs.
+- YouTube permission does not automatically clear monetization review; reused-content policy is tracked separately.
+
 ## NEXT
-1. Verify the fresh GitHub Actions run for P1/P1.1.
-2. Add URL fetch/transcription for Idea Inbox.
-3. Add platform-specific rights-policy evidence.
-4. Add analytics persistence and live ingestion.
-5. Add ads/revenue and learning loop.
+1. Verify the fresh GitHub Actions run for P1/P1.2.
+2. Add analytics persistence and live ingestion.
+3. Add ads/revenue schemas and ingestion.
+4. Add performance learning loop.
+5. Add actual video-generation adapter.
 6. Run controlled SELF_ONLY/private E2E and capture real receipts.
