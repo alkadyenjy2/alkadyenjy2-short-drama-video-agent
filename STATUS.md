@@ -23,7 +23,10 @@
 - Muse Video API key/endpoint for real generation.
 
 ## FRESH EXECUTION STATUS
-- Python tests have not been executed in this GitHub-only environment; no PASS claim is made.
+- GitHub Actions run 35653974857 = SUCCESS on 2026-09-21.
+- Meta audit = 14 visible PASS assertions.
+- TikTok/YouTube audit = 17 visible PASS assertions.
+- Tests use mocked provider responses and no live credentials.
 - Docker build, Railway deployment, and live platform publishing are not claimed.
 
 ## NEXT
