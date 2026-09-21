@@ -13,6 +13,8 @@ on:
       - "source_adapters.py"
       - "platform_recommender.py"
       - "discovery_pipeline.py"
+      - "idea_fetcher.py"
+      - "rights_policy_evidence.py"
       - ".github/workflows/python-audit.yml"
 jobs:
   tests:
@@ -27,3 +29,4 @@ jobs:
       - run: python tests/test_tiktok_youtube_audit.py
       - run: python tests/test_p1_intelligence_audit.py
       - run: python tests/test_discovery_pipeline.py
+      - run: python tests/test_idea_fetch_and_rights.py
