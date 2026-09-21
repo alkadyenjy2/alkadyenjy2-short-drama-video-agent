@@ -6,6 +6,10 @@ on:
       - "publisher.py"
       - "tests/**"
       - "requirements.txt"
+      - "trend_intelligence.py"
+      - "rights_engine.py"
+      - "idea_inbox.py"
+      - "analytics_schema.py"
       - ".github/workflows/python-audit.yml"
 jobs:
   tests:
@@ -18,3 +22,4 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python tests/test_meta_audit.py
       - run: python tests/test_tiktok_youtube_audit.py
+      - run: python tests/test_p1_intelligence_audit.py
