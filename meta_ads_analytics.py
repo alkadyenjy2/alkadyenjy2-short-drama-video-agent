@@ -20,7 +20,7 @@ class MetaAdsInsightsAdapter:
                  graph_version: Optional[str] = None, timeout: int = 30):
         self.access_token = access_token or os.getenv("META_ADS_ACCESS_TOKEN") or os.getenv("META_PAGE_ACCESS_TOKEN")
         self.account_id = account_id or os.getenv("META_AD_ACCOUNT_ID")
-        self.graph_version = graph_version or os.getenv("META_GRAPH_VERSION", "v23.0")
+        self.graph_version = graph_version or os.getenv("META_GRAPH_VERSION", "v26.0")
         self.timeout = timeout
 
     def fetch_account_insights(self, since: str, until: str, level: str = "ad") -> Dict:
