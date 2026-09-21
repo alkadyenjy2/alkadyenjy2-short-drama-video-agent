@@ -157,10 +157,10 @@ def _classify_tiktok_error(http_status: int, error_code: str = "", message: str 
 def _classify_youtube_error(http_status: int, reason: str = "", message: str = "") -> Tuple[str, bool]:
     r = (reason or "").lower()
     msg = (message or "").lower()
-    if http_status in (401, 403) and any(x in r + " " + msg for x in ("auth", "login", "forbidden", "permission", "quota")):
-        return ("authentication_or_authorization_failure", False)
     if "quota" in r or "quota" in msg:
         return ("quota_exceeded", False)
+    if http_status == 401 or (http_status == 403 and any(x in r + " " + msg for x in ("auth", "login", "permission", "forbidden"))):
+        return ("authentication_or_authorization_failure", False)
     if http_status in (429, 500, 502, 503, 504):
         return ("temporary_provider_failure", True)
     if "invalid" in r or "invalid" in msg:
