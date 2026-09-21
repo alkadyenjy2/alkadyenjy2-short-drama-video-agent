@@ -192,17 +192,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def show_trending(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
-    text = "🔥 **القصص الأكثر ربحاً الآن (2026) - ESTIMATED:**\n"
-    text += "_Profit Score و Views هي تقديرات وليست حقائق مؤكدة - تحتاج مصدر/تاريخ_\n\n"
+
+    if not TRENDING:
+        await query.edit_message_text(
+            "🔎 مفيش Trend data live متاحة حالياً.\n\n"
+            "الـagent مش هيعرض بيانات views/profit ثابتة أو قديمة على إنها تريند حالي.\n"
+            "لازم YouTube Data API أو TikTok Research API يكون متاح قبل تشغيل Live Discovery.",
+            parse_mode="Markdown"
+        )
+        return
+
+    text = "🔥 **Live Trend Observations**\n\n"
     keyboard = []
     for i, story in enumerate(TRENDING[:5]):
         text += f"{i+1}. **{story['title']}**\n"
-        text += f"   Genre: {story['genre']} | Score: {story['profit_score']}/10 [ESTIMATED]\n"
-        text += f"   Views: {story['views_estimate']} [third-party-estimated]\n"
-        text += f"   Hook: {story['hook']}\n\n"
-        keyboard.append([InlineKeyboardButton(f"✅ اختار {story['title'][:20]}", callback_data=f"select_{story['id']}")])
-    
+        text += f"   Evidence: {story.get('evidence_status','UNKNOWN')}\n"
+        text += f"   Source: {story.get('source','unknown')}\n"
+        text += f"   Observed: {story.get('observed_at','UNKNOWN')}\n\n"
+        keyboard.append([InlineKeyboardButton(f"اختار {story['title'][:20]}", callback_data=f"select_{story['id']}")])
+
     keyboard.append([InlineKeyboardButton("🔙 رجوع", callback_data="back_home")])
     await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
@@ -218,8 +226,7 @@ async def handle_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["selected_story_id"] = story_id
     
     keyboard = [
-        [InlineKeyboardButton("🎬 ابدأ التقطيع والتوليد", callback_data=f"generate_{story_id}")],
-        [InlineKeyboardButton("📝 عدل القصة قبل التوليد", callback_data="edit_story")],
+        [InlineKeyboardButton("🎬 جهز خطة الحلقات", callback_data=f"generate_{story_id}")],
         [InlineKeyboardButton("🔙 رجوع للتريندج", callback_data="show_trending")]
     ]
     
@@ -239,55 +246,35 @@ async def handle_generate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     story_id = query.data.replace("generate_", "")
     story = next((s for s in TRENDING if s["id"] == story_id), None)
-    
-    await query.edit_message_text(f"⏳ بقطع **{story['title']}** لـ {story['beats']} حلقات 9:16...\nبستخدم Muse Video + نفس الشخصيات... (v1.1 with versioning)")
-    
-    await asyncio.sleep(1)
-    
-    for beat in range(1, story['beats']+1):
-        video_id = f"{story_id}_beat_{beat}"
-        # Initial version v1
-        if video_id not in video_versions:
-            video_versions[video_id] = {"current_version": "v1", "history": []}
-        
-        keyboard = [
-            [InlineKeyboardButton("✅ Approve & نشر", callback_data=f"approve_beat_{video_id}"),
-             InlineKeyboardButton("✏️ عدل", callback_data=f"edit_beat_{video_id}")],
-            [InlineKeyboardButton("❌ Reject", callback_data=f"reject_beat_{video_id}")]
-        ]
-        await context.bot.send_message(
-            chat_id=query.message.chat_id,
-            text=f"🎬 **Beat {beat}/{story['beats']} - {story['title']}** [{video_versions[video_id]['current_version']}]\n"
-                 f"📹 فيديو {40+beat*2} ثانية | 9:16 | Captions جاهزة\n"
-                 f"📝 Caption: \"{story['hook']} - الجزء {beat}\"\n"
-                 f"🏷️ #{' #'.join(story['tags'][:3])}\n"
-                 f"🆔 video_id: {video_id}\n\n"
-                 f"لو عايز تعدل، ابعت تعليقك زي:\n"
-                 f"\"خلي الإضاءة أغمق\" أو \"قص أول 3 ثواني\"",
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode="Markdown"
-        )
-        await asyncio.sleep(0.3)
+    if not story:
+        await query.edit_message_text("القصة غير موجودة في مصدر Live Discovery.")
+        return
+
+    await query.edit_message_text(
+        f"🧩 **خطة إنتاج فقط — {story['title']}**\n\n"
+        f"الحلقات المخططة: {story.get('beats', 0)}\n"
+        "الحالة: PLAN_ONLY\n"
+        "Generation evidence: NOT_AVAILABLE\n"
+        "لا يوجد Preview أو Publish أو Approve قبل ظهور artifact حقيقي.",
+        parse_mode="Markdown"
+    )
 
 async def handle_edit_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     user_id = str(update.effective_user.id)
-    # For demo, use last selected video_id if available, else generic
     video_id = context.user_data.get("last_video_id", "generic_video")
-    
+
     parsed = parse_edit_comment(text)
-    
     if not parsed["understood"]:
         await update.message.reply_text(
-            "🤔 مفهمتش التعليق، جرب تقول:\n"
+            "🤔 مفهمتش التعليق. جرب مثلاً:\n"
             "• خلي الإضاءة أغمق / افتح الإضاءة\n"
             "• قص أول 3 ثواني\n"
             "• غير الكابشن لـ ...\n"
             "• اسرع الفيديو / ابطأ"
         )
         return
-    
-    # Create operation logs for each operation
+
     created_logs = []
     for op in parsed["operations"]:
         log = create_operation_log(
@@ -299,23 +286,16 @@ async def handle_edit_comment(update: Update, context: ContextTypes.DEFAULT_TYPE
             parent_version=get_video_version_info(video_id)["current_version"]
         )
         created_logs.append(log)
-    
-    ops_text = "\n".join([f"• {l['operation_type']}: {l['parsed_value'] or ''} → {l['new_version']} (id: {l['operation_id']})" for l in created_logs])
-    
-    await update.message.reply_text(
-        f"✅ **فهمت تعليقك - Operation Log Created:**\n{ops_text}\n\n"
-        f"⏳ بطبق التعديلات بـ Muse Image editing (بيحافظ على نفس الشخصيات)...\n"
-        f"Preview الجديد: {created_logs[0]['preview_reference'] if created_logs else 'N/A'}"
+
+    ops_text = "\n".join(
+        [f"• {l['operation_type']}: {l['parsed_value'] or ''} → {l['new_version']} (id: {l['operation_id']})"
+         for l in created_logs]
     )
-    
-    await asyncio.sleep(1)
     await update.message.reply_text(
-        f"🎬 **تم التعديل - Version Incremented!**\n"
-        f"Video: {video_id}\n"
-        f"Version: {created_logs[0]['parent_version']} → {created_logs[0]['new_version']}\n"
-        f"Operation IDs: {', '.join([l['operation_id'] for l in created_logs])}\n"
-        f"📹 Preview: {created_logs[0]['preview_reference']}\n"
-        f"[▶️ Preview الجديد - {created_logs[0]['new_version']}]"
+        f"📝 **Operation Plan Created**\n{ops_text}\n\n"
+        "الحالة: PLAN_ONLY\n"
+        "التعديل لم يُنفذ على فيديو فعلي لأن video-generation provider غير configured.",
+        parse_mode="Markdown"
     )
 
 # === Application setup with ENV ONLY token ===
