@@ -155,10 +155,10 @@ def _platform_idempotency_key(publication_id: str, platform: str) -> str:
 def _classify_tiktok_error(http_status: int, error_code: str = "", message: str = "") -> Tuple[str, bool]:
     code = (error_code or "").lower()
     msg = (message or "").lower()
-    if http_status == 401 or code == "access_token_invalid" or "access token" in msg and ("invalid" in msg or "expired" in msg):
-        return ("authentication_failure", False)
     if code == "scope_not_authorized":
         return ("authorization_failure", False)
+    if http_status == 401 or code == "access_token_invalid" or "access token" in msg and ("invalid" in msg or "expired" in msg):
+        return ("authentication_failure", False)
     if code in ("invalid_video", "file_format_check_failed", "duration_check_failed",
                 "frame_rate_check_failed", "picture_size_check_failed",
                 "invalid_param", "privacy_level_option_mismatch",
