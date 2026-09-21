@@ -45,12 +45,9 @@ button:hover { background:#E50914; color:#fff; }
 </div>
 
 <div class="card">
-<h3 class="gold">📊 حالة الايجنت (Agent Core)</h3>
-<p>Visual Factory: READY | Character Bible: Consistent Face | Arabic Parser: اضاءة اغمق قص كابشن</p>
-<p>Beats: 3-5 per story, 40-60 sec each, 1080x1920, 9:16</p>
-<a href="/agent/status"><button>عرض حالة الايجنت</button></a>
-<a href="/publisher/status"><button>حالة النشر (Publisher)</button></a>
-<a href="/stories"><button>القصص التريندينج</button></a>
+<h3 class="gold">🔁 Production Loop</h3>
+<p>Discovery → Rights Review → Generation → Approval → Publish → Analytics → Learning.</p>
+<p>لا يتم اعتبار أي فيديو مولداً أو منشوراً بدون artifact/receipt حقيقي.</p>
 </div>
 
 <div class="card">
@@ -61,10 +58,8 @@ button:hover { background:#E50914; color:#fff; }
 </div>
 
 <div class="card">
-<h3 class="gold">🎯 خطة أول 3 شهور (كشركة دعاية)</h3>
-<p><b>شهر 1 - Proof:</b> 30 فيديو (2 يومياً) + إعلان ممول $5/يوم على أفضل فيديو</p>
-<p><b>شهر 2 - Community:</b> سلسلة "اطلب قصتك" UGC + مقارنة v1 vs v2 vs v3</p>
-<p><b>شهر 3 - Monetization:</b> 3 باقات Free/Creator $19/Agency $99 + Webinar</p>
+<h3 class="gold">🧭 Platform Fit</h3>
+<p>المنصة لا يتم اختيارها بنسبة ROI ثابتة. الاختيار يعتمد على البيانات المرصودة، صلاحيات الحساب، ومتطلبات النشر.</p>
 </div>
 
 <div class="card">
