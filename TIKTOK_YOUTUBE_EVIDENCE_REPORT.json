@@ -6,7 +6,7 @@
     "env_example": "3a0096d6f41cad748c0e79438cbd603dcf81f9d9",
     "tests": "09eb99e603aefc9f7bc86b3045a25783822a1b87"
   },
-  "tests_run": 20,
+  "tests_run": 30,
   "tests_passed": null,
   "tests_failed": null,
   "execution_status": "NOT_FRESHLY_VERIFIED_IN_CURRENT_CONNECTOR",
