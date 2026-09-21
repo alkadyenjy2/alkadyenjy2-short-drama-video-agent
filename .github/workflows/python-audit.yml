@@ -2,6 +2,11 @@ name: Python audit
 on:
   push:
     branches: [main]
+    paths:
+      - "publisher.py"
+      - "tests/**"
+      - "requirements.txt"
+      - ".github/workflows/python-audit.yml"
 jobs:
   tests:
     runs-on: ubuntu-latest
