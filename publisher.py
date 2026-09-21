@@ -136,35 +136,578 @@ class MetaPublisher:
         else:
             return self.publish_facebook_video(video_path_or_url=video_path, title=caption[:100], description=f"{caption} {' '.join(['#' + h for h in hashtags])}", publication_id=publication_id, operation_id=op_id, idempotency_key=idempotency_key)
 
+def _classify_tiktok_error(http_status: int, error_code: str = "", message: str = "") -> Tuple[str, bool]:
+    code = (error_code or "").lower()
+    msg = (message or "").lower()
+    if http_status == 401 or code in ("access_token_invalid", "scope_not_authorized") or "access token" in msg and ("invalid" in msg or "expired" in msg):
+        return ("authentication_failure", False)
+    if code in ("privacy_level_option_mismatch", "url_ownership_unverified", "invalid_param", "spam_risk_user_banned_from_posting"):
+        return ("invalid_request_or_permission", False)
+    if code in ("spam_risk_too_many_posts", "reached_active_user_cap", "rate_limit_exceeded") or http_status == 429:
+        return ("rate_limit", True)
+    if code in ("internal_error", "internal") or http_status in (500, 502, 503, 504):
+        return ("temporary_provider_failure", True)
+    if code in ("video_pull_failed",):
+        return ("media_transfer_failure", True)
+    if code in ("file_format_check_failed", "duration_check_failed", "frame_rate_check_failed", "picture_size_check_failed", "spam_risk", "spam_risk_text"):
+        return ("invalid_media_or_policy", False)
+    return ("unknown_provider_response", False)
+
+
+def _classify_youtube_error(http_status: int, reason: str = "", message: str = "") -> Tuple[str, bool]:
+    r = (reason or "").lower()
+    msg = (message or "").lower()
+    if http_status in (401, 403) and any(x in r + " " + msg for x in ("auth", "login", "forbidden", "permission", "quota")):
+        return ("authentication_or_authorization_failure", False)
+    if "quota" in r or "quota" in msg:
+        return ("quota_exceeded", False)
+    if http_status in (429, 500, 502, 503, 504):
+        return ("temporary_provider_failure", True)
+    if "invalid" in r or "invalid" in msg:
+        return ("invalid_request_or_media", False)
+    return ("unknown_provider_response", False)
+
+
 class TikTokPublisher:
+    INIT_URL = "https://open.tiktokapis.com/v2/post/publish/video/init/"
+    STATUS_URL = "https://open.tiktokapis.com/v2/post/publish/status/fetch/"
+    CREATOR_INFO_URL = "https://open.tiktokapis.com/v2/post/publish/creator_info/query/"
+    MAX_RETRIES = 3
+    CHUNK_SIZE = 10 * 1024 * 1024
+
     def __init__(self):
         self.client_key = os.getenv("TIKTOK_CLIENT_KEY")
         self.client_secret = os.getenv("TIKTOK_CLIENT_SECRET")
         self.access_token = os.getenv("TIKTOK_ACCESS_TOKEN")
+        self.poll_seconds = float(os.getenv("TIKTOK_STATUS_POLL_SECONDS", "3"))
+        self.max_status_polls = int(os.getenv("TIKTOK_MAX_STATUS_POLLS", "20"))
+
     def _check_credentials(self):
-        if not self.client_key or not self.client_secret: return False, "TIKTOK_CLIENT_KEY missing"
-        if not self.access_token: return False, "TIKTOK_ACCESS_TOKEN missing"
-        return True, "ok"
-    def publish_direct_post(self, video_url_or_path, caption, hashtags, publication_id, privacy_level="SELF_ONLY", source="PULL_FROM_URL"):
+        if not self.client_key or not self.client_secret:
+            return False, "TIKTOK_CLIENT_KEY or TIKTOK_CLIENT_SECRET missing", "authentication_failure"
+        if not self.access_token:
+            return False, "TIKTOK_ACCESS_TOKEN missing - OAuth video.publish required", "authentication_failure"
+        return True, "ok", "ok"
+
+    def _headers(self):
+        return {"Authorization": f"Bearer {self.access_token}", "Content-Type": "application/json; charset=UTF-8"}
+
+    @staticmethod
+    def _response_json(response):
+        try:
+            return response.json()
+        except Exception:
+            return {}
+
+    def _api_error(self, response):
+        body = self._response_json(response)
+        err = body.get("error") or {}
+        code = str(err.get("code") or "")
+        message = str(err.get("message") or body.get("message") or "")
+        category, retryable = _classify_tiktok_error(response.status_code, code, message)
+        return category, retryable, code, message, body
+
+    def _creator_info(self):
+        import requests
+        response = requests.post(self.CREATOR_INFO_URL, headers=self._headers(), timeout=30)
+        if response.status_code != 200:
+            return False, None, self._api_error(response)
+        body = self._response_json(response)
+        err = body.get("error") or {}
+        if err.get("code") not in (None, "", "ok"):
+            category, retryable = _classify_tiktok_error(response.status_code, str(err.get("code")), str(err.get("message") or ""))
+            return False, None, (category, retryable, str(err.get("code")), str(err.get("message") or ""), body)
+        return True, body.get("data") or {}, None
+
+    def _evidence(self, publication_id, operation_id, status, evidence_status, publish_id=None,
+                  provider_object_id=None, error_code=None, error_message=None, retry_count=0,
+                  terminal_status="UNKNOWN", source=None):
+        return {
+            "operation_id": operation_id,
+            "video_id": publication_id,
+            "platform": "tiktok",
+            "publish_id": publish_id,
+            "provider_object_id": provider_object_id,
+            "request_timestamp": _now_iso(),
+            "verification_timestamp": _now_iso(),
+            "terminal_status": terminal_status,
+            "evidence_status": evidence_status,
+            "retry_count": retry_count,
+            "source": source,
+            "error_code": error_code,
+            "error_message": _redact_token(error_message) if error_message else None,
+        }
+
+    def _post_with_retry(self, url, payload):
+        import requests
+        last = None
+        for attempt in range(self.MAX_RETRIES + 1):
+            try:
+                response = requests.post(url, headers=self._headers(), json=payload, timeout=30)
+            except requests.RequestException as exc:
+                if attempt >= self.MAX_RETRIES:
+                    return None, ("network_error", False, "request_exception", str(exc), {})
+                time.sleep(_exponential_backoff(attempt))
+                continue
+            last = response
+            category, retryable, code, message, body = self._api_error(response)
+            if response.status_code == 200 and (body.get("error") or {}).get("code") in (None, "", "ok"):
+                return response, None
+            if not retryable or attempt >= self.MAX_RETRIES:
+                return response, (category, retryable, code, message, body)
+            time.sleep(_exponential_backoff(attempt))
+        return last, ("unknown_provider_response", False, "", "", {})
+
+    def publish_direct_post(self, video_url_or_path, caption, hashtags, publication_id,
+                            privacy_level="SELF_ONLY", source=None, operation_id=None):
+        import requests
         attempt_id = f"attempt_{uuid.uuid4().hex[:8]}"
-        ok, reason = self._check_credentials()
-        if not ok: return {"attempt_id": attempt_id, "provider": "tiktok", "state": PublicationState.FAILED, "reason": reason, "receipt": None, "platform_id": None, "evidence_gate": "BLOCKED"}
-        return {"attempt_id": attempt_id, "provider": "tiktok", "state": PublicationState.FAILED, "reason": "TIKTOK_ADAPTER_READY_BUT_BLOCKED", "receipt": None, "platform_id": None, "evidence_gate": "ENFORCED"}
+        op_id = operation_id or f"op_{uuid.uuid4().hex[:12]}"
+        ok, reason, category = self._check_credentials()
+        if not ok:
+            return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "tiktok",
+                    "state": PublicationState.FAILED, "reason": reason, "receipt": None,
+                    "platform_id": None, "evidence_gate": "BLOCKED", "evidence_record":
+                    self._evidence(publication_id, op_id, "FAILED", "BLOCKED_CREDENTIALS",
+                                   error_code=category, error_message=reason, terminal_status="FAILED")}
+
+        is_url = isinstance(video_url_or_path, str) and video_url_or_path.startswith("https://")
+        source = source or ("PULL_FROM_URL" if is_url else "FILE_UPLOAD")
+        if source not in ("PULL_FROM_URL", "FILE_UPLOAD"):
+            return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "tiktok",
+                    "state": PublicationState.FAILED, "reason": "source must be PULL_FROM_URL or FILE_UPLOAD",
+                    "receipt": None, "platform_id": None, "evidence_gate": "ENFORCED"}
+
+        file_size = None
+        chunk_size = None
+        total_chunks = None
+        if source == "PULL_FROM_URL":
+            if not is_url:
+                return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "tiktok",
+                        "state": PublicationState.FAILED, "reason": "PULL_FROM_URL requires public HTTPS URL",
+                        "receipt": None, "platform_id": None, "evidence_gate": "ENFORCED"}
+        else:
+            if not isinstance(video_url_or_path, str) or not os.path.isfile(video_url_or_path):
+                return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "tiktok",
+                        "state": PublicationState.FAILED, "reason": "FILE_UPLOAD requires an existing local video file",
+                        "receipt": None, "platform_id": None, "evidence_gate": "ENFORCED"}
+            file_size = os.path.getsize(video_url_or_path)
+            if file_size <= 0 or file_size > 4 * 1024 * 1024 * 1024:
+                return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "tiktok",
+                        "state": PublicationState.FAILED, "reason": "Video size must be >0 and <=4GB",
+                        "receipt": None, "platform_id": None, "evidence_gate": "ENFORCED"}
+            chunk_size = file_size if file_size < 5 * 1024 * 1024 else min(self.CHUNK_SIZE, 64 * 1024 * 1024)
+            total_chunks = max(1, file_size // chunk_size)
+
+        creator_ok, creator, creator_error = self._creator_info()
+        if not creator_ok:
+            category, retryable, code, message, body = creator_error
+            return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "tiktok",
+                    "state": PublicationState.FAILED, "reason": message or category, "category": category,
+                    "receipt": None, "platform_id": None, "evidence_gate": "ENFORCED",
+                    "evidence_record": self._evidence(publication_id, op_id, "FAILED", "FAILED_CREATOR_INFO",
+                                                       error_code=code, error_message=message, terminal_status="FAILED")}
+
+        allowed_privacy = creator.get("privacy_level_options") or []
+        if privacy_level not in allowed_privacy:
+            if "SELF_ONLY" in allowed_privacy:
+                privacy_level = "SELF_ONLY"
+            else:
+                return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "tiktok",
+                        "state": PublicationState.FAILED, "reason": "Requested privacy level is not allowed by creator_info",
+                        "receipt": None, "platform_id": None, "evidence_gate": "ENFORCED"}
+
+        title = (caption or "").strip()
+        if hashtags:
+            title = (title + " " + " ".join(f"#{h.lstrip('#')}" for h in hashtags)).strip()
+        title = title[:2200]
+        post_info = {
+            "privacy_level": privacy_level,
+            "title": title,
+            "disable_duet": False,
+            "disable_comment": False,
+            "disable_stitch": False,
+            "is_aigc": True,
+        }
+        if source == "PULL_FROM_URL":
+            source_info = {"source": "PULL_FROM_URL", "video_url": video_url_or_path}
+        else:
+            source_info = {"source": "FILE_UPLOAD", "video_size": file_size,
+                           "chunk_size": chunk_size, "total_chunk_count": total_chunks}
+        payload = {"post_info": post_info, "source_info": source_info}
+        response, error = self._post_with_retry(self.INIT_URL, payload)
+        if error:
+            category, retryable, code, message, body = error
+            return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "tiktok",
+                    "state": PublicationState.FAILED, "reason": message or category, "category": category,
+                    "receipt": None, "platform_id": None, "publish_id": (body.get("data") or {}).get("publish_id"),
+                    "evidence_gate": "ENFORCED - init failed", "evidence_record":
+                    self._evidence(publication_id, op_id, "FAILED", "FAILED_INIT",
+                                   publish_id=(body.get("data") or {}).get("publish_id"),
+                                   error_code=code, error_message=message, terminal_status="FAILED")}
+
+        body = self._response_json(response)
+        data = body.get("data") or {}
+        publish_id = data.get("publish_id")
+        upload_url = data.get("upload_url")
+        if not publish_id:
+            return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "tiktok",
+                    "state": PublicationState.FAILED, "reason": "TikTok init returned HTTP success without publish_id",
+                    "receipt": None, "platform_id": None, "evidence_gate": "ENFORCED - HTTP 200 is NOT proof",
+                    "evidence_record": self._evidence(publication_id, op_id, "FAILED", "MISSING_PUBLISH_ID",
+                                                       terminal_status="FAILED")}
+
+        if source == "FILE_UPLOAD":
+            with open(video_url_or_path, "rb") as fh:
+                offset = 0
+                chunk_index = 0
+                while offset < file_size:
+                    size = min(chunk_size, file_size - offset)
+                    chunk = fh.read(size)
+                    if len(chunk) != size:
+                        return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "tiktok",
+                                "state": PublicationState.FAILED, "reason": "Local file changed during upload",
+                                "receipt": None, "platform_id": None, "evidence_gate": "ENFORCED"}
+                    first = offset
+                    last = offset + size - 1
+                    headers = {
+                        "Content-Type": "video/mp4",
+                        "Content-Length": str(size),
+                        "Content-Range": f"bytes {first}-{last}/{file_size}",
+                    }
+                    sent = False
+                    for attempt in range(self.MAX_RETRIES + 1):
+                        try:
+                            upload_response = requests.put(upload_url, headers=headers, data=chunk, timeout=120)
+                        except requests.RequestException as exc:
+                            if attempt >= self.MAX_RETRIES:
+                                return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "tiktok",
+                                        "state": PublicationState.FAILED, "reason": str(exc), "receipt": None,
+                                        "platform_id": None, "evidence_gate": "ENFORCED"}
+                            time.sleep(_exponential_backoff(attempt))
+                            continue
+                        if upload_response.status_code in (201, 206):
+                            sent = True
+                            break
+                        if upload_response.status_code in (429, 500, 502, 503, 504) and attempt < self.MAX_RETRIES:
+                            time.sleep(_exponential_backoff(attempt))
+                            continue
+                        return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "tiktok",
+                                "state": PublicationState.FAILED,
+                                "reason": f"TikTok upload chunk failed HTTP {upload_response.status_code}",
+                                "receipt": None, "platform_id": None, "evidence_gate": "ENFORCED"}
+                    if not sent:
+                        return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "tiktok",
+                                "state": PublicationState.FAILED, "reason": "TikTok upload chunk retry budget exhausted",
+                                "receipt": None, "platform_id": None, "evidence_gate": "ENFORCED"}
+                    offset += size
+                    chunk_index += 1
+
+        status = None
+        status_body = {}
+        for poll in range(self.max_status_polls):
+            response, error = self._post_with_retry(self.STATUS_URL, {"publish_id": publish_id})
+            if error:
+                category, retryable, code, message, body = error
+                if not retryable:
+                    return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "tiktok",
+                            "state": PublicationState.FAILED, "reason": message or category,
+                            "category": category, "receipt": None, "platform_id": None,
+                            "publish_id": publish_id, "evidence_gate": "ENFORCED",
+                            "evidence_record": self._evidence(publication_id, op_id, "FAILED", "FAILED_STATUS",
+                                                               publish_id=publish_id, error_code=code,
+                                                               error_message=message, terminal_status="FAILED",
+                                                               retry_count=poll)}
+                continue
+            status_body = self._response_json(response)
+            data = status_body.get("data") or {}
+            status = data.get("status")
+            post_ids = data.get("publicaly_available_post_id") or data.get("publicly_available_post_id") or []
+            if status == "PUBLISH_COMPLETE":
+                if post_ids:
+                    post_id = str(post_ids[0])
+                    evidence = self._evidence(publication_id, op_id, "PUBLISHED", "VERIFIED",
+                                              publish_id=publish_id, provider_object_id=post_id,
+                                              terminal_status=status, retry_count=poll, source=source)
+                    return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "tiktok",
+                            "state": PublicationState.PUBLISHED, "reason": "TikTok publication receipt verified",
+                            "receipt": post_id, "platform_id": post_id, "publish_id": publish_id,
+                            "evidence_gate": "VERIFIED", "evidence_record": evidence}
+                return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "tiktok",
+                        "state": PublicationState.PENDING_VERIFICATION,
+                        "reason": "TikTok reports PUBLISH_COMPLETE but no public post_id is available yet",
+                        "receipt": None, "platform_id": None, "publish_id": publish_id,
+                        "evidence_gate": "ENFORCED - no post_id means not PUBLISHED",
+                        "evidence_record": self._evidence(publication_id, op_id, "PENDING_VERIFICATION",
+                                                           "MISSING_POST_ID", publish_id=publish_id,
+                                                           terminal_status=status, retry_count=poll, source=source)}
+            if status == "FAILED":
+                fail_reason = str(data.get("fail_reason") or "unknown")
+                category, retryable = _classify_tiktok_error(400, fail_reason, fail_reason)
+                return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "tiktok",
+                        "state": PublicationState.FAILED, "reason": fail_reason, "category": category,
+                        "receipt": None, "platform_id": None, "publish_id": publish_id,
+                        "evidence_gate": "ENFORCED", "evidence_record":
+                        self._evidence(publication_id, op_id, "FAILED", "FAILED_STATUS",
+                                       publish_id=publish_id, error_code=fail_reason,
+                                       error_message=fail_reason, terminal_status="FAILED",
+                                       retry_count=poll, source=source)}
+            if poll < self.max_status_polls - 1:
+                time.sleep(self.poll_seconds)
+
+        return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "tiktok",
+                "state": PublicationState.PENDING_VERIFICATION,
+                "reason": f"TikTok status did not reach terminal state after {self.max_status_polls} polls",
+                "receipt": None, "platform_id": None, "publish_id": publish_id,
+                "evidence_gate": "ENFORCED - terminal receipt not observed",
+                "evidence_record": self._evidence(publication_id, op_id, "PENDING_VERIFICATION",
+                                                   "POLL_TIMEOUT", publish_id=publish_id,
+                                                   terminal_status=status or "UNKNOWN",
+                                                   retry_count=self.max_status_polls, source=source)}
+
 
 class YouTubePublisher:
+    INIT_URL = "https://www.googleapis.com/upload/youtube/v3/videos"
+    TOKEN_URL = "https://oauth2.googleapis.com/token"
+    VERIFY_URL = "https://www.googleapis.com/youtube/v3/videos"
+    MAX_RETRIES = 3
+    CHUNK_SIZE = 8 * 1024 * 1024
+
     def __init__(self):
         self.client_id = os.getenv("YOUTUBE_CLIENT_ID")
         self.client_secret = os.getenv("YOUTUBE_CLIENT_SECRET")
         self.refresh_token = os.getenv("YOUTUBE_REFRESH_TOKEN")
+        self.access_token = os.getenv("YOUTUBE_ACCESS_TOKEN")
+        self.privacy_default = os.getenv("YOUTUBE_PRIVACY_STATUS", "private").lower()
+        self.poll_seconds = float(os.getenv("YOUTUBE_POLL_SECONDS", "0"))
+
     def _check_credentials(self):
-        if not self.client_id or not self.client_secret: return False, "YOUTUBE_CLIENT_ID missing"
-        if not self.refresh_token and not os.getenv("YOUTUBE_ACCESS_TOKEN"): return False, "YOUTUBE_REFRESH_TOKEN missing"
-        return True, "ok"
-    def publish(self, video_path, title, description, tags, publication_id, privacy_status="private"):
+        if not self.client_id or not self.client_secret:
+            return False, "YOUTUBE_CLIENT_ID or YOUTUBE_CLIENT_SECRET missing", "authentication_failure"
+        if not self.refresh_token and not self.access_token:
+            return False, "YOUTUBE_REFRESH_TOKEN or YOUTUBE_ACCESS_TOKEN missing - OAuth youtube.upload required", "authentication_failure"
+        if self.privacy_default not in ("private", "public", "unlisted"):
+            return False, "YOUTUBE_PRIVACY_STATUS must be private, public, or unlisted", "invalid_config"
+        return True, "ok", "ok"
+
+    def _get_access_token(self):
+        if self.access_token:
+            return self.access_token, None
+        import requests
+        response = requests.post(self.TOKEN_URL, data={
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
+            "refresh_token": self.refresh_token,
+            "grant_type": "refresh_token",
+        }, timeout=30)
+        if response.status_code != 200:
+            body = {}
+            try:
+                body = response.json()
+            except Exception:
+                pass
+            category, retryable = _classify_youtube_error(response.status_code, str(body.get("error") or ""), str(body.get("error_description") or ""))
+            return None, (category, retryable, str(body.get("error") or ""), str(body.get("error_description") or ""))
+        body = response.json()
+        token = body.get("access_token")
+        if not token:
+            return None, ("authentication_failure", False, "missing_access_token", "Token endpoint returned no access_token")
+        return token, None
+
+    @staticmethod
+    def _response_json(response):
+        try:
+            return response.json()
+        except Exception:
+            return {}
+
+    def _evidence(self, publication_id, operation_id, evidence_status, terminal_status="UNKNOWN",
+                  provider_object_id=None, error_code=None, error_message=None, retry_count=0):
+        return {
+            "operation_id": operation_id,
+            "video_id": publication_id,
+            "platform": "youtube",
+            "provider_object_id": provider_object_id,
+            "request_timestamp": _now_iso(),
+            "verification_timestamp": _now_iso(),
+            "terminal_status": terminal_status,
+            "evidence_status": evidence_status,
+            "retry_count": retry_count,
+            "error_code": error_code,
+            "error_message": _redact_token(error_message) if error_message else None,
+        }
+
+    def publish(self, video_path, title, description, tags, publication_id,
+                privacy_status=None, operation_id=None):
+        import requests
         attempt_id = f"attempt_{uuid.uuid4().hex[:8]}"
-        ok, reason = self._check_credentials()
-        if not ok: return {"attempt_id": attempt_id, "provider": "youtube", "state": PublicationState.FAILED, "reason": reason, "receipt": None, "platform_id": None, "evidence_gate": "BLOCKED"}
-        return {"attempt_id": attempt_id, "provider": "youtube", "state": PublicationState.FAILED, "reason": "YOUTUBE_ADAPTER_READY_BUT_BLOCKED", "receipt": None, "platform_id": None, "evidence_gate": "ENFORCED"}
+        op_id = operation_id or f"op_{uuid.uuid4().hex[:12]}"
+        ok, reason, category = self._check_credentials()
+        if not ok:
+            return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "youtube",
+                    "state": PublicationState.FAILED, "reason": reason, "category": category,
+                    "receipt": None, "platform_id": None, "evidence_gate": "BLOCKED",
+                    "evidence_record": self._evidence(publication_id, op_id, "BLOCKED_CREDENTIALS",
+                                                       terminal_status="FAILED", error_code=category,
+                                                       error_message=reason)}
+        if not isinstance(video_path, str) or not os.path.isfile(video_path):
+            return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "youtube",
+                    "state": PublicationState.FAILED, "reason": "YouTube upload requires an existing local video file",
+                    "receipt": None, "platform_id": None, "evidence_gate": "ENFORCED"}
+
+        privacy = (privacy_status or self.privacy_default).lower()
+        if privacy not in ("private", "public", "unlisted"):
+            privacy = "private"
+
+        token, token_error = self._get_access_token()
+        if token_error:
+            category, retryable, code, message = token_error
+            return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "youtube",
+                    "state": PublicationState.FAILED, "reason": message or category, "category": category,
+                    "receipt": None, "platform_id": None, "evidence_gate": "ENFORCED",
+                    "evidence_record": self._evidence(publication_id, op_id, "FAILED_TOKEN",
+                                                       terminal_status="FAILED", error_code=code,
+                                                       error_message=message)}
+
+        size = os.path.getsize(video_path)
+        if size <= 0:
+            return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "youtube",
+                    "state": PublicationState.FAILED, "reason": "Video file is empty",
+                    "receipt": None, "platform_id": None, "evidence_gate": "ENFORCED"}
+
+        title = (title or "Short Drama").strip()[:100]
+        description = (description or "").strip()[:5000]
+        metadata = {
+            "snippet": {"title": title, "description": description,
+                        "tags": [str(t)[:500] for t in (tags or [])][:500],
+                        "categoryId": "24"},
+            "status": {"privacyStatus": privacy, "selfDeclaredMadeForKids": False},
+        }
+        params = {"uploadType": "resumable", "part": "snippet,status"}
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json; charset=UTF-8",
+            "X-Upload-Content-Length": str(size),
+            "X-Upload-Content-Type": "video/mp4",
+        }
+        try:
+            init_response = requests.post(self.INIT_URL, params=params, headers=headers,
+                                          json=metadata, timeout=30)
+        except requests.RequestException as exc:
+            return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "youtube",
+                    "state": PublicationState.FAILED, "reason": str(exc), "receipt": None,
+                    "platform_id": None, "evidence_gate": "ENFORCED"}
+
+        if init_response.status_code not in (200, 201):
+            body = self._response_json(init_response)
+            error_obj = body.get("error") or {}
+            category, retryable = _classify_youtube_error(init_response.status_code,
+                                                          str(error_obj.get("errors", [{}])[0].get("reason", "") if error_obj.get("errors") else error_obj.get("status", "")),
+                                                          str(error_obj.get("message") or ""))
+            return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "youtube",
+                    "state": PublicationState.FAILED, "reason": error_obj.get("message") or "YouTube resumable init failed",
+                    "category": category, "receipt": None, "platform_id": None,
+                    "evidence_gate": "ENFORCED", "evidence_record":
+                    self._evidence(publication_id, op_id, "FAILED_INIT", terminal_status="FAILED",
+                                   error_code=category, error_message=str(error_obj.get("message") or ""))}
+
+        upload_url = init_response.headers.get("Location")
+        if not upload_url:
+            return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "youtube",
+                    "state": PublicationState.FAILED, "reason": "YouTube returned HTTP success without resumable Location",
+                    "receipt": None, "platform_id": None,
+                    "evidence_gate": "ENFORCED - HTTP 200 is NOT proof",
+                    "evidence_record": self._evidence(publication_id, op_id, "MISSING_UPLOAD_LOCATION",
+                                                       terminal_status="FAILED")}
+
+        offset = 0
+        final_body = None
+        with open(video_path, "rb") as fh:
+            while offset < size:
+                chunk = fh.read(min(self.CHUNK_SIZE, size - offset))
+                if not chunk:
+                    break
+                last = offset + len(chunk) - 1
+                chunk_headers = {
+                    "Authorization": f"Bearer {token}",
+                    "Content-Length": str(len(chunk)),
+                    "Content-Type": "video/mp4",
+                    "Content-Range": f"bytes {offset}-{last}/{size}",
+                }
+                uploaded = False
+                for attempt in range(self.MAX_RETRIES + 1):
+                    try:
+                        upload_response = requests.put(upload_url, headers=chunk_headers, data=chunk, timeout=120)
+                    except requests.RequestException as exc:
+                        if attempt >= self.MAX_RETRIES:
+                            return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "youtube",
+                                    "state": PublicationState.FAILED, "reason": str(exc), "receipt": None,
+                                    "platform_id": None, "evidence_gate": "ENFORCED"}
+                        time.sleep(_exponential_backoff(attempt))
+                        continue
+                    if upload_response.status_code in (200, 201):
+                        final_body = self._response_json(upload_response)
+                        offset = size
+                        uploaded = True
+                        break
+                    if upload_response.status_code == 308:
+                        range_header = upload_response.headers.get("Range", "")
+                        match = re.search(r"-(\d+)$", range_header)
+                        if match:
+                            offset = int(match.group(1)) + 1
+                        else:
+                            offset = last + 1
+                        uploaded = True
+                        break
+                    if upload_response.status_code in (429, 500, 502, 503, 504) and attempt < self.MAX_RETRIES:
+                        time.sleep(_exponential_backoff(attempt))
+                        continue
+                    body = self._response_json(upload_response)
+                    return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "youtube",
+                            "state": PublicationState.FAILED, "reason": (body.get("error") or {}).get("message") or
+                            f"YouTube upload failed HTTP {upload_response.status_code}", "receipt": None,
+                            "platform_id": None, "evidence_gate": "ENFORCED"}
+                if not uploaded:
+                    return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "youtube",
+                            "state": PublicationState.FAILED, "reason": "YouTube upload retry budget exhausted",
+                            "receipt": None, "platform_id": None, "evidence_gate": "ENFORCED"}
+
+        provider_id = (final_body or {}).get("id")
+        if not provider_id:
+            return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "youtube",
+                    "state": PublicationState.FAILED, "reason": "YouTube upload completed without videoId receipt",
+                    "receipt": None, "platform_id": None,
+                    "evidence_gate": "ENFORCED - no videoId = not PUBLISHED",
+                    "evidence_record": self._evidence(publication_id, op_id, "MISSING_VIDEO_ID",
+                                                       terminal_status="FAILED")}
+
+        verify_response = requests.get(self.VERIFY_URL, params={"part": "id,snippet,status", "id": provider_id},
+                                       headers={"Authorization": f"Bearer {token}"}, timeout=30)
+        if verify_response.status_code != 200:
+            return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "youtube",
+                    "state": PublicationState.PENDING_VERIFICATION, "reason": "videoId received but verification read failed",
+                    "receipt": None, "platform_id": None, "video_id_provider": provider_id,
+                    "evidence_gate": "ENFORCED - receipt not independently verified",
+                    "evidence_record": self._evidence(publication_id, op_id, "VERIFY_READ_FAILED",
+                                                       terminal_status="PENDING_VERIFICATION",
+                                                       provider_object_id=provider_id)}
+
+        verify_body = self._response_json(verify_response)
+        items = verify_body.get("items") or []
+        if not items or str(items[0].get("id")) != str(provider_id):
+            return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "youtube",
+                    "state": PublicationState.PENDING_VERIFICATION, "reason": "videoId receipt could not be verified",
+                    "receipt": None, "platform_id": None, "video_id_provider": provider_id,
+                    "evidence_gate": "ENFORCED", "evidence_record":
+                    self._evidence(publication_id, op_id, "VERIFY_MISMATCH",
+                                   terminal_status="PENDING_VERIFICATION", provider_object_id=provider_id)}
+
+        evidence = self._evidence(publication_id, op_id, "VERIFIED", terminal_status="PUBLISHED",
+                                   provider_object_id=provider_id)
+        return {"attempt_id": attempt_id, "operation_id": op_id, "provider": "youtube",
+                "state": PublicationState.PUBLISHED, "reason": "YouTube videoId receipt verified",
+                "receipt": provider_id, "platform_id": provider_id, "video_id_provider": provider_id,
+                "evidence_gate": "VERIFIED", "evidence_record": evidence}
 
 class PlatformAdapterV12:
     def __init__(self, provider: str):
