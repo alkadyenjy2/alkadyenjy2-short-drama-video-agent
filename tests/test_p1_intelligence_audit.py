@@ -18,3 +18,5 @@ def main():
     print("P1 AUDIT: 8 PASS")
 
 if __name__ == "__main__": main()
+
+# CI trigger: P1 audit included in workflow.
