@@ -61,9 +61,14 @@ def _sse_result(response: requests.Response, timeout: float) -> Any:
 
 def _call_gradio(base_url: str, api_name: str, data: List[Any], timeout: float = 180.0) -> Any:
     base_url = base_url.rstrip("/")
+    headers = {}
+    token = os.getenv("HF_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
     r = requests.post(
         f"{base_url}/gradio_api/call/{api_name.lstrip('/')}",
         json={"data": data},
+        headers=headers,
         timeout=30,
     )
     if r.status_code not in (200, 202):
@@ -76,7 +81,7 @@ def _call_gradio(base_url: str, api_name: str, data: List[Any], timeout: float =
         f"{base_url}/gradio_api/call/{api_name.lstrip('/')}/{event_id}",
         stream=True,
         timeout=(30, timeout),
-        headers={"Accept": "text/event-stream"},
+        headers={**headers, "Accept": "text/event-stream"},
     )
     if stream.status_code != 200:
         raise GradioGenerationError(f"Gradio stream failed: HTTP {stream.status_code}")
@@ -143,7 +148,7 @@ def generate_story_video(
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     tmp_path = out_dir / "generation_download.tmp.mp4"
-    vr = requests.get(video_url, stream=True, timeout=60)
+    vr = requests.get(video_url, stream=True, timeout=60, headers=headers if "headers" in locals() else {})
     if vr.status_code != 200:
         raise GradioGenerationError(f"Generated artifact download failed: HTTP {vr.status_code}")
     digest = hashlib.sha256()
