@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Dict, List, Optional
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
+from production_bot_handlers import handle_generate_real, handle_text_real
 
 # === 1. BOT_TOKEN - ENV ONLY - FAIL FAST IF ABSENT ===
 def get_bot_token() -> str:
@@ -306,8 +307,8 @@ def build_application():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(show_trending, pattern="show_trending"))
     app.add_handler(CallbackQueryHandler(handle_selection, pattern="select_"))
-    app.add_handler(CallbackQueryHandler(handle_generate, pattern="generate_"))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_edit_comment))
+    app.add_handler(CallbackQueryHandler(handle_generate_real, pattern="generate_"))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_real))
     return app
 
 if __name__ == "__main__":
