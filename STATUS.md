@@ -248,3 +248,11 @@ The codebase passes the local deterministic audit, but production runtime still 
 - No external publication was attempted; no receipt/video ID exists.
 - Evidence recorded in `evidence/publication-executor-audit-2026-09-28.md`.
 - Result: `PUBLISH = BLOCKED_EXTERNAL_AUTH`. The fail-closed publication gate remains intact.
+
+
+## AUTONOMOUS PUBLICATION ROUTE RECHECK — 2026-09-28
+- xpost account discovery remains empty and its connection-issues list is empty; there is no connected social account to repair or publish through.
+- Public inspection of the xpost accounts URL confirmed that account connection options are behind authentication; no anonymous/direct platform connection route is exposed.
+- No login, credential entry, post creation, or publication side effect was performed.
+- Browser inspection was used only to verify the blocker; the canonical release gate remains fail-closed.
+- Result remains: PUBLISH = BLOCKED_EXTERNAL_AUTH.
