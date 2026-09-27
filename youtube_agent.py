@@ -17,6 +17,8 @@ from publisher import PublicationState, YouTubePublisher
 
 MAX_EPISODES = 10
 STAGES = ("SCRIPT", "ASSETS", "RENDER", "MP4_EVIDENCE", "METADATA", "APPROVAL", "PUBLISH_EVIDENCE")
+CANONICAL_ARTIFACT_CLASS = "CANONICAL_STORY_EPISODE"
+FALLBACK_ARTIFACT_MODE = "DETERMINISTIC_MOTION_FALLBACK_RECUT"
 
 
 def episode_id(n: int) -> str:
@@ -97,6 +99,43 @@ def build_release_record(n: int, script: dict, assets: dict, render: dict, metad
     }
 
 
+
+def load_artifact_manifest(video_path: str) -> dict[str, Any]:
+    p = Path(video_path)
+    candidates = [
+        p.with_suffix(".manifest.json"),
+        p.parent / f"{p.stem}.manifest.json",
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            try:
+                data = json.loads(candidate.read_text(encoding="utf-8"))
+                if isinstance(data, dict):
+                    return data
+            except Exception:
+                return {"_manifest_error": "invalid JSON"}
+    return {"_manifest_error": "artifact manifest missing"}
+
+
+def artifact_publish_classification(video_path: str) -> dict[str, Any]:
+    manifest = load_artifact_manifest(video_path)
+    if manifest.get("_manifest_error"):
+        return {"status": "BLOCKED", "reason": manifest["_manifest_error"]}
+    if manifest.get("mode") == FALLBACK_ARTIFACT_MODE:
+        return {
+            "status": "BLOCKED",
+            "reason": "deterministic fallback recut is a release candidate only; canonical story publication is disabled",
+            "mode": manifest.get("mode"),
+        }
+    if manifest.get("artifact_class") != CANONICAL_ARTIFACT_CLASS:
+        return {
+            "status": "BLOCKED",
+            "reason": "artifact is not explicitly classified as a canonical story episode",
+            "artifact_class": manifest.get("artifact_class"),
+        }
+    return {"status": "READY", "artifact_class": manifest["artifact_class"]}
+
+
 def load_approval(path: str) -> dict[str, Any]:
     p = Path(path)
     if not p.is_file():
@@ -117,6 +156,10 @@ def publish_if_approved(n: int, video_path: str, title: str, description: str, t
 
     if n > MAX_EPISODES:
         return {"status": "BLOCKED", "stage": "APPROVAL", "reason": "10-episode release cap exceeded"}
+
+    classification = artifact_publish_classification(video_path)
+    if classification.get("status") != "READY":
+        return {"status": "BLOCKED", "stage": "RENDER", "reason": classification.get("reason"), "artifact_classification": classification}
 
     media = verify_mp4(video_path)
     if media.get("status") != "GENERATED":
