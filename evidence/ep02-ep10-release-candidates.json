@@ -1,0 +1,18 @@
+{
+  "release_type": "RELEASE_CANDIDATES_ONLY",
+  "hard_cap": 10,
+  "canonical_story_source_verified": false,
+  "episodes": [
+    {"episode":"EP02","artifact_class":"RELEASE_CANDIDATE_FALLBACK","mode":"DETERMINISTIC_MOTION_FALLBACK_RECUT","publication_allowed":false},
+    {"episode":"EP03","artifact_class":"RELEASE_CANDIDATE_FALLBACK","mode":"DETERMINISTIC_MOTION_FALLBACK_RECUT","publication_allowed":false},
+    {"episode":"EP04","artifact_class":"RELEASE_CANDIDATE_FALLBACK","mode":"DETERMINISTIC_MOTION_FALLBACK_RECUT","publication_allowed":false},
+    {"episode":"EP05","artifact_class":"RELEASE_CANDIDATE_FALLBACK","mode":"DETERMINISTIC_MOTION_FALLBACK_RECUT","publication_allowed":false},
+    {"episode":"EP06","artifact_class":"RELEASE_CANDIDATE_FALLBACK","mode":"DETERMINISTIC_MOTION_FALLBACK_RECUT","publication_allowed":false},
+    {"episode":"EP07","artifact_class":"RELEASE_CANDIDATE_FALLBACK","mode":"DETERMINISTIC_MOTION_FALLBACK_RECUT","publication_allowed":false},
+    {"episode":"EP08","artifact_class":"RELEASE_CANDIDATE_FALLBACK","mode":"DETERMINISTIC_MOTION_FALLBACK_RECUT","publication_allowed":false},
+    {"episode":"EP09","artifact_class":"RELEASE_CANDIDATE_FALLBACK","mode":"DETERMINISTIC_MOTION_FALLBACK_RECUT","publication_allowed":false},
+    {"episode":"EP10","artifact_class":"RELEASE_CANDIDATE_FALLBACK","mode":"DETERMINISTIC_MOTION_FALLBACK_RECUT","publication_allowed":false}
+  ],
+  "evidence_manifest": "evidence/ep02-ep10-fallback-manifest.json",
+  "story_source_audit": "evidence/story-source-audit-2026-09-27.md"
+}
