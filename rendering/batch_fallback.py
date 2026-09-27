@@ -82,8 +82,8 @@ def render(ep):
    run(["ffmpeg","-y","-v","error","-f","lavfi","-i","anullsrc=r=48000:cl=stereo",
         "-t",str(dur),"-ar","48000","-ac","2","-c:a","pcm_s16le",str(a)])
  vlist=epdir/"video.txt"; alist=epdir/"audio.txt"
- vlist.write_text("".join(f"file '{seg/f'{i:02d}.mp4'}'\\n" for i in range(1,11)))
- alist.write_text("".join(f"file '{aud/f'{i:02d}.wav'}'\\n" for i in range(1,11)))
+ vlist.write_text("".join(f"file '{seg/f'{i:02d}.mp4'}'\n" for i in range(1,11)))
+ alist.write_text("".join(f"file '{aud/f'{i:02d}.wav'}'\n" for i in range(1,11)))
  vcat=epdir/"vcat.mp4"; acat=epdir/"acat.wav"
  run(["ffmpeg","-y","-v","error","-f","concat","-safe","0","-i",str(vlist),"-c","copy",str(vcat)])
  run(["ffmpeg","-y","-v","error","-f","concat","-safe","0","-i",str(alist),"-c:a","pcm_s16le",str(acat)])
