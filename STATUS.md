@@ -168,3 +168,18 @@ The codebase passes the local deterministic audit, but production runtime still 
 - Higgsfield Terms of Use (updated 2026-07-26) state that Higgsfield does not claim ownership of Outputs and does not restrict commercial use; users remain responsible for third-party rights and applicable AI disclosure.
 - The Episode 1 fictional character prompts explicitly excluded celebrity/real-person resemblance.
 - Publication remains disabled until the separate publication approval/evidence gate is satisfied.
+
+
+## PRODUCTION PIPELINE AUDIT — 2026-09-27
+- Canonical repo verified: `alkadyenjy2/alkadyenjy2-short-drama-video-agent`, public, default branch `main`.
+- Latest repo revision after this audit work: `d17f3d506b881793731190d412a5315d71bf2c03`.
+- Existing deterministic audit evidence remains valid: latest full Python audit run `36335553519` completed SUCCESS; prior TikTok/YouTube audit run `35662151553` completed SUCCESS with the documented 30 PASS / 0 FAIL suite. No claim is made that these tests prove live provider execution.
+- Real video evidence remains limited to Shot 1 and the Episode 1 deterministic fallback artifact documented above. Code/workflow presence is not treated as media evidence.
+- YouTube transport is implemented and hardened, but the current ChatGPT YouTube execution connector has no connected YouTube account: xpost account discovery returned an empty account list. Repository OAuth variables are not exposed/verified in this environment. Therefore YouTube publication is BLOCKED and was not attempted.
+- Added `youtube_agent.py`: one release orchestrator, maximum 10 episodes, explicit stage states SCRIPT -> ASSETS -> RENDER -> MP4_EVIDENCE -> METADATA -> APPROVAL -> PUBLISH_EVIDENCE, and a hard approval record requirement before calling the existing YouTube transport.
+- Added isolated `tests/test_youtube_agent.py` and `.github/workflows/youtube-agent-audit.yml`. The pre-existing Python audit also ran successfully because its test path includes `tests/**`; this does not constitute live publishing evidence.
+- OpenArt account is authenticated on Free plan with 10 credits. Current catalog has no Qwen Image 2.1 or MovieFlow entries and no DramaClaw executor. The only currently affordable OpenArt image route is Kling 3 Omni at 10 credits/image. One Episode 1 poster was submitted as the requested secondary creative adapter; it is pending and no poster completion is claimed yet.
+- Qwen Image 2.1 / MovieFlow were NOT executed because the required DramaClaw-first pilot condition is not satisfied by an available authorized executor, and the OpenArt catalog does not expose those models.
+- Cantina AI fruit-pregnancy meme was not executed.
+- No YouTube/TikTok/Meta publication or test post was sent.
+- Release status taxonomy: READY = stage prerequisites verified; GENERATED = real artifact exists; PUBLISHED = real platform receipt + verification exists; BLOCKED = required external gate unavailable; NOT VERIFIED = evidence insufficient.
