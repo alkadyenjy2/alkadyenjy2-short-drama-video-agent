@@ -5,6 +5,8 @@ on:
     paths:
       - "youtube_agent.py"
       - "tests/test_youtube_agent.py"
+      - "rendering/batch_fallback.py"
+      - ".github/workflows/youtube-agent-audit.yml"
   workflow_dispatch:
 jobs:
   audit:
@@ -16,3 +18,33 @@ jobs:
           python-version: "3.11"
       - run: pip install -r requirements.txt
       - run: PYTHONPATH=. python tests/test_youtube_agent.py
+
+  fallback-episodes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install render dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg espeak-ng
+      - name: Generate EP02-EP10
+        run: python rendering/batch_fallback.py
+      - name: Verify artifact count and media
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(find build/episodes -name '*.mp4' | wc -l)" -eq 9
+          test "$(find build/episodes -name '*.manifest.json' | wc -l)" -eq 9
+          for f in build/episodes/EP*/THE_LAST_VOICEMAIL_EP*_Fallback_Recut.mp4; do
+            ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height -of csv=p=0 "$f" | grep -E '^h264,720,1280$'
+            ffmpeg -v error -i "$f" -f null -
+          done
+      - name: Upload EP02-EP10 evidence artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: short-drama-ep02-ep10-fallback-evidence
+          path: build/episodes/
+          if-no-files-found: error
