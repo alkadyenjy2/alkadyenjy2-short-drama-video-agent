@@ -1,4 +1,4 @@
-# STATUS.md - Single Source of Truth - Short Drama Video Agent
+﻿# STATUS.md - Single Source of Truth - Short Drama Video Agent
 
 ## CURRENT STATE (2026-09-21)
 - P1 foundation added: Trend Intelligence, Rights/Provenance Gate, Idea/URL Inbox, and platform-neutral Analytics schema.
@@ -113,13 +113,13 @@ Still not executable without external credentials/approvals/provider access:
 5. Add actual video-generation provider adapter after its API contract is available.
 6. Run live discovery/analytics only after credentials/permissions are supplied; then capture evidence IDs and timestamps.
 
-## FINAL LOCAL AUDIT — 2026-09-21
+## FINAL LOCAL AUDIT â€” 2026-09-21
 - Desktop Commander cloned and audited the exact GitHub main revision.
 - Python compile: PASS.
 - Dependency imports (python-telegram-bot, FastAPI, Uvicorn): PASS after adding missing runtime dependencies.
 - Bot safe-catalog smoke: PASS; production trend fixture is now empty until live discovery evidence exists.
 - Web app import smoke: PASS.
-- Full deterministic audit suite: PASS — P1 8, discovery 4, idea/rights 3, analytics persistence 1, analytics adapters 2, analytics ingestion 1, learning 2, media/finance 4, Meta Ads/generation 2, repository lifecycle 1, Meta legacy audit 14, TikTok/YouTube legacy audit 17.
+- Full deterministic audit suite: PASS â€” P1 8, discovery 4, idea/rights 3, analytics persistence 1, analytics adapters 2, analytics ingestion 1, learning 2, media/finance 4, Meta Ads/generation 2, repository lifecycle 1, Meta legacy audit 14, TikTok/YouTube legacy audit 17.
 - Repository lifecycle bug fixed: SQLite connections now close explicitly; analytics table is included in health checks; analytics tests close repositories.
 - Fake-success paths fixed in Telegram bot: no stale trend ranking, no fake Muse generation, no fake Preview/Approve/Publish, and edit responses are PLAN_ONLY until a real artifact exists.
 - Stale fixed-ROI dashboard/document claims removed.
@@ -127,10 +127,18 @@ Still not executable without external credentials/approvals/provider access:
 - Final local working tree was clean after removing generated cache directories.
 - Latest audited main revision before this status-only commit: 5d5bcaf3fe19c018136066a7fa40fa55be4343bc.
 
-## RELEASE CANDIDATE BOUNDARY
-The codebase passes the local deterministic audit, but production runtime still requires external credentials/approvals/provider access listed above. No production deployment was performed.
+## FRESH REAL VIDEO EVIDENCE — 2026-09-27
+- Shot 1 of THE LAST VOICEMAIL was generated as a real MP4 through the connected Higgsfield executor.
+- Artifact: C:\\Users\\LTC\\ShortDrama_Shot1_20260927.mp4
+- Verified: 1,430,570 bytes; H.264 480x854 24fps; 7.041667s; AAC audio; ffmpeg full decode PASS.
+- SHA-256: 0F12F280B776B73B1760F00DEE2D55EC6BD5C7DDC8BC39570C34899A8F6D8423
+- Publication was not attempted.
+- This is generation evidence, not a claim that Episode 1 or the full pilot is complete.
 
-## TIKTOK + YOUTUBE HARDENING — 2026-09-22
+## RELEASE CANDIDATE BOUNDARY
+The codebase passes the local deterministic audit. A real external generation executor has now produced and verified Shot 1. The canonical runtime remains fail-closed; full episode production still requires a connected video executor with sufficient capacity and then human QA before publication.
+
+## TIKTOK + YOUTUBE HARDENING â€” 2026-09-22
 - Fresh official-doc audit completed against current TikTok and YouTube documentation.
 - TikTok hardened: credential gate returns `BLOCKED_CREDENTIALS`; explicit error taxonomy; bounded max-3 retry; token sanitization; deterministic platform idempotency key; evidence fields completed; Direct Post receipt requires `PUBLISH_COMPLETE` plus `publicaly_available_post_id`.
 - TikTok OAuth refresh helper added; current TikTok documentation says refresh tokens can rotate, so the returned replacement must be persisted by the external credential layer.
