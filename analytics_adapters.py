@@ -16,7 +16,7 @@ class AnalyticsAccessError(RuntimeError):
 
 class YouTubeAnalyticsAdapter:
     def __init__(self, access_token: Optional[str] = None, timeout: int = 30):
-        self.access_token = access_token or os.getenv("YOUTUBE_ACCESS_TOKEN")
+        self.access_token = access_token if access_token is not None else os.getenv("YOUTUBE_ACCESS_TOKEN")
         self.timeout = timeout
 
     def fetch_video_metrics(self, video_id: str, start_date: str, end_date: str,
@@ -72,7 +72,7 @@ class YouTubeAnalyticsAdapter:
 
 class TikTokOwnedAnalyticsAdapter:
     def __init__(self, access_token: Optional[str] = None, timeout: int = 30):
-        self.access_token = access_token or os.getenv("TIKTOK_ACCESS_TOKEN")
+        self.access_token = access_token if access_token is not None else os.getenv("TIKTOK_ACCESS_TOKEN")
         self.timeout = timeout
 
     def fetch_recent_videos(self, max_count: int = 20) -> List[Dict]:
