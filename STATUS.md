@@ -200,3 +200,22 @@ The codebase passes the local deterministic audit, but production runtime still 
 - Canonical production publication remains unverified: no connected YouTube execution account was available, and no live publication was attempted.
 - Canonical real-media evidence remains EP01 deterministic fallback: 95.000s H.264 720x1280/AAC artifact, SHA-256 `A638A844C6D95CDDF8B6CAC8B82DE94AEB23F101A55BB94009FFD7993CF47581`, FFmpeg decode PASS, publication NOT_PERFORMED.
 - EP02–EP10 remain NOT VERIFIED; the release orchestrator hard-caps publication at 10 episodes and independently gates each episode.
+
+
+## EP02-EP10 FALLBACK ARTIFACT EXECUTION — 2026-09-27
+- Fresh local execution was performed on Desktop Commander device Fattouh against canonical main revision 6de63167803caf86e6bf298be31113496a3fee0d.
+- The new renderer rendering/batch_fallback.py generated exactly 9 real MP4 artifacts: EP02 through EP10; no EP11+ artifact was generated.
+- Every artifact is 95.000s, H.264 720x1280 at 24fps, AAC audio, and passed full FFmpeg decode validation (returncode=0).
+- SHA-256 and byte size evidence is committed in evidence/ep02-ep10-fallback-manifest.json.
+- EP02: 2A11DBFD62D2750B891787D0D20C66FE39A948AF689B059B035834FC267B7845 / 3,655,266 bytes.
+- EP03: 6C9183C93DB57BA37B746C538D6063EEB41FBB8DA3C89C613FA90D998334B473 / 3,638,619 bytes.
+- EP04: E7D441F7D29B74D049DFD6A5F3B58230FB917679E50A92597CCD5348DBFAF42B / 3,726,976 bytes.
+- EP05: 6FFF24C274A0FCDD4A8C8FC21F50882878B8F265418D99931DCDC26BC2BBF83C / 3,624,531 bytes.
+- EP06: 8E3581F0089A93945C337334867176ECC511F59447FB8BD5570DB80AD3C75C9E / 3,759,915 bytes.
+- EP07: 7B7778FA48D8DCF77F2870596D7578DE6A35D2ED4C826582D2C5A50078C82511 / 3,729,169 bytes.
+- EP08: D20AE084D36166F5FA562985CBAE895540F941392BE626C1EC9D38D584E41558 / 3,649,174 bytes.
+- EP09: 2D5A881A72093636BB51E51B7FE87C82F75348DAF61BFC191D6FACF67744AAEF / 3,765,483 bytes.
+- EP10: D62E9DD5B4F669FD35C4908A5433390DD2B2ABA9A3C16B959480387CE88770E5 / 3,613,232 bytes.
+- Important content boundary: these are deterministic recuts of the existing THE LAST VOICEMAIL reference stills, not AI-generated episodes and not newly authored canonical story episodes. They are valid media artifacts, but they do not prove unique story production.
+- GitHub Actions did not expose a new run for the pushed workflow revisions through the connector, and browser dispatch was blocked because the GitHub browser session was unauthenticated. Therefore these artifacts are locally executed/verified evidence, not GitHub Actions artifact evidence.
+- YouTube/TikTok/Meta publication remains BLOCKED/NOT_PERFORMED; no publication receipt exists.
