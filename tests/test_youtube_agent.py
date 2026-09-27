@@ -39,8 +39,13 @@ with tempfile.TemporaryDirectory() as d:
     classified = artifact_publish_classification(str(fallback))
     assert classified["status"] == "BLOCKED"
     assert "release candidate only" in classified["reason"]
+    approval = Path(d) / "approval.json"
+    approval.write_text(
+        '{"approved":true,"approved_by":"ci-test","approved_at":"2026-09-27T00:00:00Z"}',
+        encoding="utf-8",
+    )
     fallback_publish = publish_if_approved(
-        2, str(fallback), "Fallback", "Fallback", [], str(Path(d) / "approval.json")
+        2, str(fallback), "Fallback", "Fallback", [], str(approval)
     )
     assert fallback_publish["status"] == "BLOCKED"
     assert fallback_publish["stage"] == "RENDER"
