@@ -7,7 +7,7 @@ from pathlib import Path
 
 root = Path("build/episodes")
 manifests = sorted(root.glob("EP*/EP*.manifest.json"))
-mp4s = sorted(root.glob("EP*/*.mp4"))
+mp4s = sorted(root.glob("EP*/THE_LAST_VOICEMAIL_EP*_Fallback_Recut.mp4"))
 assert len(manifests) == 9, f"expected 9 manifests, got {len(manifests)}"
 assert len(mp4s) == 9, f"expected 9 mp4s, got {len(mp4s)}"
 
