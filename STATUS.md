@@ -190,3 +190,13 @@ The codebase passes the local deterministic audit, but production runtime still 
 - Its manifest reports 95.000s, H.264 720x1280 24fps, AAC 48kHz stereo, `FFMPEG_DECODE_PASS`, 4,205,506 MP4 bytes, SHA-256 `A638A844C6D95CDDF8B6CAC8B82DE94AEB23F101A55BB94009FFD7993CF47581`.
 - The uploaded artifact exists as GitHub Actions artifact `10936862104` (ZIP containing MP4 + manifest; 4,210,961 bytes). The artifact ZIP digest is `43d4d583c2d0de90d7f46ddc474f6790bab2250f74a565b86bf7e26415d74bdc`.
 - An earlier local artifact hash recorded elsewhere (`8556...`) is not used as current canonical evidence because the latest reproducible CI render has different bytes. No publication claim is attached to either artifact.
+
+
+## FINAL EXECUTION AUDIT — 2026-09-27 20:45 +03:00
+- Latest repository HEAD after execution fixes: `2b0270a282ea5aa097cea6fda2575e28dc8bdbbb`.
+- YouTube Agent CI regression was diagnosed from GitHub Actions run `36337790527`: the test failed because the repository root was not on `sys.path`. Fixed in commit `56279d223593a946935816096168c9df01019578` by invoking the test with `PYTHONPATH=.`; added a missing-file MP4 gate assertion in `2b0270a282ea5aa097cea6fda2575e28dc8bdbbb`.
+- Fresh Actions evidence for the repaired HEAD was not exposed by the connected GitHub connector at audit time; therefore the repaired YouTube Agent CI is NOT VERIFIED, not marked PASS.
+- Railway audit found two pre-existing services named `short-drama-video-agen`, both sourced from the non-canonical repository name `alkadyenjy2/short-drama-video-agen`. The active Docker service deployment `b8c071cd-0aa0-45ba-9903-d92c92f23de3` is CRASHED because Telegram rejected the configured BOT_TOKEN. This is stale/non-canonical infrastructure and was not repointed or overwritten.
+- Canonical production publication remains unverified: no connected YouTube execution account was available, and no live publication was attempted.
+- Canonical real-media evidence remains EP01 deterministic fallback: 95.000s H.264 720x1280/AAC artifact, SHA-256 `A638A844C6D95CDDF8B6CAC8B82DE94AEB23F101A55BB94009FFD7993CF47581`, FFmpeg decode PASS, publication NOT_PERFORMED.
+- EP02–EP10 remain NOT VERIFIED; the release orchestrator hard-caps publication at 10 episodes and independently gates each episode.
