@@ -148,3 +148,16 @@ The codebase passes the local deterministic audit, but production runtime still 
 - Important current-doc correction: the old 1600-unit `videos.insert` quota assumption is stale. Current Google documentation uses a separate 100-calls/day `videos.insert` bucket at 1 unit/call; other methods use the general quota bucket.
 - Fresh local execution on Desktop Commander device Fattouh at commit `f5b5ec8e96e4baf58b9d8957e58c7abdc5f4821f`: Python 3.14.6; `py_compile` PASS; `tests/test_tiktok_youtube_audit.py` printed `=== Summary: 30 PASS / 0 FAIL ===`. No live credentials or live publishing were used.
 - MetaPublisher, Meta state, Meta persistence, and Meta architecture were not modified by this hardening patch.
+
+## FRESH FREE PRODUCTION FALLBACK — 2026-09-27
+- Added `rendering/episode1_animatic.py` as an isolated deterministic fallback renderer.
+- It does not pretend to be AI video generation: it uses the verified real Shot 1 MP4 plus existing fictional-character/reference stills, FFmpeg Ken-Burns motion, captions, and local `espeak-ng` speech.
+- GitHub Actions public-runner execution completed successfully: run `36333723374`, job `108660451880`.
+- Evidence Gate: `EVIDENCE_GATE_PASS`.
+- Final Episode 1 fallback artifact: 95.000 seconds, H.264 720x1280 24fps, AAC 48kHz stereo, 4,211,942 bytes.
+- Final artifact SHA-256: `8556B22D3FE1AFF7F4537BA6F976EB1D4A9A81BA6396D08B8C176AC1EEDC4F99`.
+- Full FFmpeg decode: `FFMPEG_DECODE_PASS`.
+- Source Shot 1 SHA-256 matches the previously verified real Shot 1: `0F12F280B776B73B1760F00DEE2D55EC6BD5C7DDC8BC39570C34899A8F6D8423`.
+- Publication: `NOT_PERFORMED`.
+- The fallback removes the immediate production dead-end when an AI video provider is unavailable. It is explicitly labeled `DETERMINISTIC_MOTION_FALLBACK`; it does not replace or weaken the external AI video-generation Evidence Gate.
+- GitHub Actions standard runners are free for public repositories, so this fallback does not require Railway, a paid video model, or a local GPU. citeturn1search0turn1search8
