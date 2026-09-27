@@ -5,9 +5,11 @@ on:
     paths:
       - "youtube_agent.py"
       - "tests/test_youtube_agent.py"
+      - "tests/test_tiktok_youtube_audit.py"
       - "rendering/batch_fallback.py"
       - "rendering/verify_batch.py"
       - "publisher.py"
+      - "analytics_adapters.py"
       - "requirements.txt"
       - ".github/workflows/youtube-agent-audit.yml"
   workflow_dispatch:
