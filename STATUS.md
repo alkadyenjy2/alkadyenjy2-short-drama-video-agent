@@ -127,6 +127,14 @@ Still not executable without external credentials/approvals/provider access:
 - Final local working tree was clean after removing generated cache directories.
 - Latest audited main revision before this status-only commit: 5d5bcaf3fe19c018136066a7fa40fa55be4343bc.
 
+## FRESH REAL VIDEO EVIDENCE - 2026-09-27
+- Shot 1 of THE LAST VOICEMAIL was generated as a real MP4 through the connected Higgsfield executor.
+- Artifact: C:\Users\LTC\ShortDrama_Shot1_20260927.mp4
+- Verified: 1430570 bytes; H.264 480x854 24fps; 7.041667s; AAC audio; ffmpeg full decode PASS.
+- SHA-256: 0F12F280B776B73B1760F00DEE2D55EC6BD5C7DDC8BC39570C34899A8F6D8423
+- Publication was not attempted.
+- This is generation evidence, not a claim that Episode 1 or the full pilot is complete.
+
 ## RELEASE CANDIDATE BOUNDARY
 The codebase passes the local deterministic audit, but production runtime still requires external credentials/approvals/provider access listed above. No production deployment was performed.
 
