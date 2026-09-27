@@ -8,6 +8,8 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -27,8 +29,51 @@ def verify_mp4(path: str) -> dict[str, Any]:
     p = Path(path)
     if not p.is_file() or p.stat().st_size <= 0:
         return {"status": "NOT_VERIFIED", "reason": "real MP4 file missing or empty"}
+
+    ffprobe = shutil.which("ffprobe")
+    if not ffprobe:
+        return {"status": "NOT_VERIFIED", "reason": "ffprobe unavailable; media cannot be behaviorally verified"}
+
+    try:
+        probe = subprocess.run(
+            [
+                ffprobe, "-v", "error",
+                "-show_entries", "format=format_name,duration,size",
+                "-show_entries", "stream=codec_type,codec_name,width,height",
+                "-of", "json", str(p),
+            ],
+            check=True, capture_output=True, text=True,
+        )
+        data = json.loads(probe.stdout)
+        fmt = data.get("format", {})
+        streams = data.get("streams", [])
+        format_name = str(fmt.get("format_name", ""))
+        duration = float(fmt.get("duration") or 0)
+        size = int(fmt.get("size") or 0)
+        has_video = any(s.get("codec_type") == "video" for s in streams)
+        has_audio = any(s.get("codec_type") == "audio" for s in streams)
+        if "mp4" not in format_name or duration <= 0 or size <= 0 or not has_video:
+            return {
+                "status": "NOT_VERIFIED",
+                "reason": "ffprobe did not confirm a playable MP4 video artifact",
+                "format_name": format_name,
+                "duration": duration,
+                "size": size,
+            }
+    except (OSError, subprocess.CalledProcessError, ValueError, json.JSONDecodeError) as exc:
+        return {"status": "NOT_VERIFIED", "reason": f"ffprobe validation failed: {type(exc).__name__}"}
+
     digest = hashlib.sha256(p.read_bytes()).hexdigest()
-    return {"status": "GENERATED", "bytes": p.stat().st_size, "sha256": digest, "path": str(p)}
+    return {
+        "status": "GENERATED",
+        "bytes": p.stat().st_size,
+        "sha256": digest,
+        "path": str(p),
+        "format_name": format_name,
+        "duration_sec": duration,
+        "video_verified": has_video,
+        "audio_verified": has_audio,
+    }
 
 
 def build_release_record(n: int, script: dict, assets: dict, render: dict, metadata: dict) -> dict[str, Any]:
@@ -72,6 +117,10 @@ def publish_if_approved(n: int, video_path: str, title: str, description: str, t
 
     if n > MAX_EPISODES:
         return {"status": "BLOCKED", "stage": "APPROVAL", "reason": "10-episode release cap exceeded"}
+
+    media = verify_mp4(video_path)
+    if media.get("status") != "GENERATED":
+        return {"status": "BLOCKED", "stage": "MP4_EVIDENCE", "reason": media.get("reason"), "mp4_evidence": media}
 
     if not os.getenv("YOUTUBE_CLIENT_ID") or not os.getenv("YOUTUBE_CLIENT_SECRET"):
         return {"status": "BLOCKED", "stage": "PUBLISH_EVIDENCE", "reason": "real YouTube OAuth client credentials unavailable"}
