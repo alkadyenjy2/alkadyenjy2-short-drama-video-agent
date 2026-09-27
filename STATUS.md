@@ -239,3 +239,12 @@ The codebase passes the local deterministic audit, but production runtime still 
 - This is fresh CI execution evidence and supersedes the earlier statement that the repaired YouTube Agent CI was NOT VERIFIED.
 - External publication remains NOT VERIFIED/BLOCKED because no connected YouTube execution account/OAuth authorization is available. No live publication receipt is claimed.
 - EP02-EP10 remain deterministic fallback release candidates only; the canonical-story publication gate remains closed for them.
+
+
+## FRESH PUBLICATION EXECUTOR AUDIT — 2026-09-28 00:31 +03:00
+- xpost account discovery was rechecked and returned an empty account list; its connector explicitly reports that no social account is connected, so no platform can receive a post through that route.
+- Canonical Desktop Commander workspace `C:\\Users\\LTC\\short-drama-video-agent` is clean on `main`.
+- Fresh local environment inspection found no YouTube client ID, client secret, refresh token, or API key environment variables, and no matching local credential/token JSON files were found in the canonical repo.
+- No external publication was attempted; no receipt/video ID exists.
+- Evidence recorded in `evidence/publication-executor-audit-2026-09-28.md`.
+- Result: `PUBLISH = BLOCKED_EXTERNAL_AUTH`. The fail-closed publication gate remains intact.
