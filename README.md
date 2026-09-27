@@ -9,6 +9,7 @@
 - `persistence/` - SQLite repo + migration path to Postgres
 - `main.py` + `health.py` + `web_app.py` - Deployment foundation + Dashboard
 - `trending_stories.json` - Trending stories source
+- `rendering/episode1_animatic.py` - free deterministic production fallback: real MP4 assembly from verified source media, motion, captions, and local TTS; explicitly not a substitute for external AI video generation.
 
 ## Quick Start
 ```bash
