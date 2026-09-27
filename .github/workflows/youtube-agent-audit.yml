@@ -15,4 +15,4 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -r requirements.txt
-      - run: python tests/test_youtube_agent.py
+      - run: PYTHONPATH=. python tests/test_youtube_agent.py
