@@ -161,3 +161,10 @@ The codebase passes the local deterministic audit, but production runtime still 
 - Publication: `NOT_PERFORMED`.
 - The fallback removes the immediate production dead-end when an AI video provider is unavailable. It is explicitly labeled `DETERMINISTIC_MOTION_FALLBACK`; it does not replace or weaken the external AI video-generation Evidence Gate.
 - GitHub Actions standard runners are free for public repositories, so this fallback does not require Railway, a paid video model, or a local GPU.
+
+
+## RIGHTS / PROVENANCE EVIDENCE — 2026-09-27
+- CreativeClaw Terms of Service (updated 2026-09-13) state that CreativeClaw does not claim ownership of generated Output and permits commercial use, while placing responsibility for third-party rights on the user.
+- Higgsfield Terms of Use (updated 2026-07-26) state that Higgsfield does not claim ownership of Outputs and does not restrict commercial use; users remain responsible for third-party rights and applicable AI disclosure.
+- The Episode 1 fictional character prompts explicitly excluded celebrity/real-person resemblance.
+- Publication remains disabled until the separate publication approval/evidence gate is satisfied.
