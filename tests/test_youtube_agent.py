@@ -39,6 +39,11 @@ with tempfile.TemporaryDirectory() as d:
     classified = artifact_publish_classification(str(fallback))
     assert classified["status"] == "BLOCKED"
     assert "release candidate only" in classified["reason"]
+    fallback_publish = publish_if_approved(
+        2, str(fallback), "Fallback", "Fallback", [], str(Path(d) / "approval.json")
+    )
+    assert fallback_publish["status"] == "BLOCKED"
+    assert fallback_publish["stage"] == "RENDER"
 
     canonical = Path(d) / "THE_LAST_VOICEMAIL_EP02.mp4"
     canonical.write_bytes(b"placeholder")
