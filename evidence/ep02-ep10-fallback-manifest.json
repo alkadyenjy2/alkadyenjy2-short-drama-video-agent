@@ -1,0 +1,19 @@
+{
+  "status": "GENERATED_VERIFIED",
+  "mode": "DETERMINISTIC_MOTION_FALLBACK_RECUT",
+  "content_note": "EP02-EP10 are real 95s MP4 recuts from the verified THE LAST VOICEMAIL reference stills. They are not AI-generated and are not new canonical story episodes.",
+  "hard_cap": 10,
+  "episodes_verified": 9,
+  "artifact_root": "C:\\Users\\LTC\\short-drama-video-agent\\build\\episodes",
+  "episodes": [
+    {"episode":"EP02","sha256":"2A11DBFD62D2750B891787D0D20C66FE39A948AF689B059B035834FC267B7845","size_bytes":3655266,"duration_sec":95.0,"video":"h264 720x1280 24fps","audio":"aac","decode":"FFMPEG_DECODE_PASS"},
+    {"episode":"EP03","sha256":"6C9183C93DB57BA37B746C538D6063EEB41FBB8DA3C89C613FA90D998334B473","size_bytes":3638619,"duration_sec":95.0,"video":"h264 720x1280 24fps","audio":"aac","decode":"FFMPEG_DECODE_PASS"},
+    {"episode":"EP04","sha256":"E7D441F7D29B74D049DFD6A5F3B58230FB917679E50A92597CCD5348DBFAF42B","size_bytes":3726976,"duration_sec":95.0,"video":"h264 720x1280 24fps","audio":"aac","decode":"FFMPEG_DECODE_PASS"},
+    {"episode":"EP05","sha256":"6FFF24C274A0FCDD4A8C8FC21F50882878B8F265418D99931DCDC26BC2BBF83C","size_bytes":3624531,"duration_sec":95.0,"video":"h264 720x1280 24fps","audio":"aac","decode":"FFMPEG_DECODE_PASS"},
+    {"episode":"EP06","sha256":"8E3581F0089A93945C337334867176ECC511F59447FB8BD5570DB80AD3C75C9E","size_bytes":3759915,"duration_sec":95.0,"video":"h264 720x1280 24fps","audio":"aac","decode":"FFMPEG_DECODE_PASS"},
+    {"episode":"EP07","sha256":"7B7778FA48D8DCF77F2870596D7578DE6A35D2ED4C826582D2C5A50078C82511","size_bytes":3729169,"duration_sec":95.0,"video":"h264 720x1280 24fps","audio":"aac","decode":"FFMPEG_DECODE_PASS"},
+    {"episode":"EP08","sha256":"D20AE084D36166F5FA562985CBAE895540F941392BE626C1EC9D38D584E41558","size_bytes":3649174,"duration_sec":95.0,"video":"h264 720x1280 24fps","audio":"aac","decode":"FFMPEG_DECODE_PASS"},
+    {"episode":"EP09","sha256":"2D5A881A72093636BB51E51B7FE87C82F75348DAF61BFC191D6FACF67744AAEF","size_bytes":3765483,"duration_sec":95.0,"video":"h264 720x1280 24fps","audio":"aac","decode":"FFMPEG_DECODE_PASS"},
+    {"episode":"EP10","sha256":"D62E9DD5B4F669FD35C4908A5433390DD2B2ABA9A3C16B959480387CE88770E5","size_bytes":3613232,"duration_sec":95.0,"video":"h264 720x1280 24fps","audio":"aac","decode":"FFMPEG_DECODE_PASS"}
+  ]
+}
