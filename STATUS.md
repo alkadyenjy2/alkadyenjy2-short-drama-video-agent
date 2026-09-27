@@ -193,7 +193,7 @@ The codebase passes the local deterministic audit, but production runtime still 
 
 
 ## FINAL EXECUTION AUDIT — 2026-09-27 20:45 +03:00
-- Latest repository HEAD after execution fixes: `2b0270a282ea5aa097cea6fda2575e28dc8bdbbb`.
+- Latest repository HEAD after execution fixes: `103f84bcd11d57922256e405f2c0dc5ba34c3e3a` (documentation-only final-audit update).
 - YouTube Agent CI regression was diagnosed from GitHub Actions run `36337790527`: the test failed because the repository root was not on `sys.path`. Fixed in commit `56279d223593a946935816096168c9df01019578` by invoking the test with `PYTHONPATH=.`; added a missing-file MP4 gate assertion in `2b0270a282ea5aa097cea6fda2575e28dc8bdbbb`.
 - Fresh Actions evidence for the repaired HEAD was not exposed by the connected GitHub connector at audit time; therefore the repaired YouTube Agent CI is NOT VERIFIED, not marked PASS.
 - Railway audit found two pre-existing services named `short-drama-video-agen`, both sourced from the non-canonical repository name `alkadyenjy2/short-drama-video-agen`. The active Docker service deployment `b8c071cd-0aa0-45ba-9903-d92c92f23de3` is CRASHED because Telegram rejected the configured BOT_TOKEN. This is stale/non-canonical infrastructure and was not repointed or overwritten.
