@@ -1,0 +1,57 @@
+name: Episode 1 Fallback Render
+
+on:
+  push:
+    paths:
+      - "rendering/episode1_animatic.py"
+      - ".github/workflows/episode1-fallback-render.yml"
+      - "STATUS.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install render dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg espeak-ng fonts-dejavu
+
+      - name: Render Episode 1
+        run: |
+          python3 rendering/episode1_animatic.py
+
+      - name: Verify artifact
+        run: |
+          test -s build/THE_LAST_VOICEMAIL_Episode1_Fallback_Animatic.mp4
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("build/THE_LAST_VOICEMAIL_Episode1_Fallback_Animatic.manifest.json")
+          m=json.loads(p.read_text())
+          assert m["evidence_status"]=="OBSERVED"
+          assert m["decode"]=="FFMPEG_DECODE_PASS"
+          assert 94.5 <= m["duration_sec"] <= 95.5
+          assert m["size_bytes"] > 0
+          print("EVIDENCE_GATE_PASS")
+          print("sha256:", m["sha256"])
+          print("duration_sec:", m["duration_sec"])
+          print("size_bytes:", m["size_bytes"])
+          PY
+
+      - name: Upload Episode 1 artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: THE_LAST_VOICEMAIL-Episode1-Fallback-Animatic
+          path: |
+            build/THE_LAST_VOICEMAIL_Episode1_Fallback_Animatic.mp4
+            build/THE_LAST_VOICEMAIL_Episode1_Fallback_Animatic.manifest.json
+          retention-days: 7
+          compression-level: 0
