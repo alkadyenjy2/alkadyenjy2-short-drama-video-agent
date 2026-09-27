@@ -3,7 +3,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from youtube_agent import MAX_EPISODES, build_release_record, episode_id, publish_if_approved, verify_mp4
+from youtube_agent import MAX_EPISODES, build_release_record, episode_id, publish_if_approved, verify_mp4, artifact_publish_classification
 
 assert MAX_EPISODES == 10
 assert episode_id(1) == "EP01"
@@ -28,6 +28,25 @@ with tempfile.TemporaryDirectory() as d:
     blocked = publish_if_approved(1, str(p), "Test", "Test", [], str(Path(d) / "missing.json"))
     assert blocked["status"] == "BLOCKED"
     assert blocked["stage"] == "APPROVAL"
+
+    fallback = Path(d) / "THE_LAST_VOICEMAIL_EP02_Fallback_Recut.mp4"
+    fallback.write_bytes(b"placeholder")
+    fallback_manifest = fallback.with_suffix(".manifest.json")
+    fallback_manifest.write_text(
+        '{"episode":"EP02","mode":"DETERMINISTIC_MOTION_FALLBACK_RECUT","content_note":"not a canonical story episode"}',
+        encoding="utf-8",
+    )
+    classified = artifact_publish_classification(str(fallback))
+    assert classified["status"] == "BLOCKED"
+    assert "release candidate only" in classified["reason"]
+
+    canonical = Path(d) / "THE_LAST_VOICEMAIL_EP02.mp4"
+    canonical.write_bytes(b"placeholder")
+    canonical.with_suffix(".manifest.json").write_text(
+        '{"episode":"EP02","artifact_class":"CANONICAL_STORY_EPISODE","mode":"AI_GENERATED_STORY"}',
+        encoding="utf-8",
+    )
+    assert artifact_publish_classification(str(canonical))["status"] == "READY"
 
     if shutil.which("ffmpeg"):
         real = Path(d) / "real.mp4"
