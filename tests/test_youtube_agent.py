@@ -12,6 +12,8 @@ assert episode_id(10) == "EP10"
 with tempfile.TemporaryDirectory() as d:
     p = Path(d) / "not-an-mp4.mp4"
     p.write_bytes(b"real-test-artifact")
+    assert verify_mp4(str(Path(d) / "missing.mp4"))["status"] == "NOT_VERIFIED"
+
     rec = build_release_record(
         1,
         {"ready": True},
