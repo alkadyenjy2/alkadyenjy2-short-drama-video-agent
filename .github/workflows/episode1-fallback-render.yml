@@ -5,7 +5,6 @@ on:
     paths:
       - "rendering/episode1_animatic.py"
       - ".github/workflows/episode1-fallback-render.yml"
-      - "STATUS.md"
   workflow_dispatch:
 
 permissions:
