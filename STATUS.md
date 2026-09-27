@@ -219,3 +219,13 @@ The codebase passes the local deterministic audit, but production runtime still 
 - Important content boundary: these are deterministic recuts of the existing THE LAST VOICEMAIL reference stills, not AI-generated episodes and not newly authored canonical story episodes. They are valid media artifacts, but they do not prove unique story production.
 - GitHub Actions did not expose a new run for the pushed workflow revisions through the connector, and browser dispatch was blocked because the GitHub browser session was unauthenticated. Therefore these artifacts are locally executed/verified evidence, not GitHub Actions artifact evidence.
 - YouTube/TikTok/Meta publication remains BLOCKED/NOT_PERFORMED; no publication receipt exists.
+
+
+## STORY SOURCE AUDIT + FALLBACK LOCK — 2026-09-27
+- Canonical repo inspection found no stored canonical scripts/story package for EP02–EP10. `trending_stories.json` is empty, and `visual_factory.py` only consumes a supplied story outline.
+- Therefore EP02–EP10 were not promoted to canonical story episodes. No story continuity was fabricated.
+- EP02–EP10 remain real, locally verified deterministic fallback MP4 artifacts with SHA-256 evidence in `evidence/ep02-ep10-fallback-manifest.json`.
+- New lock: `evidence/ep02-ep10-release-candidates.json` classifies all nine as `RELEASE_CANDIDATE_FALLBACK` and publication_allowed=false.
+- New story-source audit: `evidence/story-source-audit-2026-09-27.md`.
+- YouTube release gate now rejects fallback recuts before transport and requires an explicit `CANONICAL_STORY_EPISODE` artifact classification manifest.
+- This closes the previous ambiguity: the nine MP4s are evidence-backed release candidates, not claimed AI-generated canonical episodes.
