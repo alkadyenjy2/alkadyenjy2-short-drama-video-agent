@@ -154,8 +154,8 @@ The codebase passes the local deterministic audit, but production runtime still 
 - It does not pretend to be AI video generation: it uses the verified real Shot 1 MP4 plus existing fictional-character/reference stills, FFmpeg Ken-Burns motion, captions, and local `espeak-ng` speech.
 - GitHub Actions public-runner execution completed successfully: run `36333723374`, job `108660451880`.
 - Evidence Gate: `EVIDENCE_GATE_PASS`.
-- Final Episode 1 fallback artifact: 95.000 seconds, H.264 720x1280 24fps, AAC 48kHz stereo, 4,211,942 bytes.
-- Final artifact SHA-256: `8556B22D3FE1AFF7F4537BA6F976EB1D4A9A81BA6396D08B8C176AC1EEDC4F99`.
+- Final Episode 1 fallback artifact: 95.000 seconds, H.264 720x1280 24fps, AAC 48kHz stereo, 4,205,506 bytes in the latest GitHub Actions render.
+- Final artifact SHA-256 from the latest verified GitHub Actions render: `A638A844C6D95CDDF8B6CAC8B82DE94AEB23F101A55BB94009FFD7993CF47581`.
 - Full FFmpeg decode: `FFMPEG_DECODE_PASS`.
 - Source Shot 1 SHA-256 matches the previously verified real Shot 1: `0F12F280B776B73B1760F00DEE2D55EC6BD5C7DDC8BC39570C34899A8F6D8423`.
 - Publication: `NOT_PERFORMED`.
@@ -183,3 +183,10 @@ The codebase passes the local deterministic audit, but production runtime still 
 - Cantina AI fruit-pregnancy meme was not executed.
 - No YouTube/TikTok/Meta publication or test post was sent.
 - Release status taxonomy: READY = stage prerequisites verified; GENERATED = real artifact exists; PUBLISHED = real platform receipt + verification exists; BLOCKED = required external gate unavailable; NOT VERIFIED = evidence insufficient.
+
+
+## EVIDENCE CORRECTION — 2026-09-27
+- The latest GitHub Actions Episode 1 render run `36333867611` is the canonical reproducible artifact evidence for the repository.
+- Its manifest reports 95.000s, H.264 720x1280 24fps, AAC 48kHz stereo, `FFMPEG_DECODE_PASS`, 4,205,506 MP4 bytes, SHA-256 `A638A844C6D95CDDF8B6CAC8B82DE94AEB23F101A55BB94009FFD7993CF47581`.
+- The uploaded artifact exists as GitHub Actions artifact `10936862104` (ZIP containing MP4 + manifest; 4,210,961 bytes). The artifact ZIP digest is `43d4d583c2d0de90d7f46ddc474f6790bab2250f74a565b86bf7e26415d74bdc`.
+- An earlier local artifact hash recorded elsewhere (`8556...`) is not used as current canonical evidence because the latest reproducible CI render has different bytes. No publication claim is attached to either artifact.
