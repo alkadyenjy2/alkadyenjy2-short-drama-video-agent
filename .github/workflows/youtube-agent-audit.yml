@@ -39,23 +39,23 @@ jobs:
           test "$(find build/episodes -name '*.mp4' | wc -l)" -eq 9
           test "$(find build/episodes -name '*.manifest.json' | wc -l)" -eq 9
           python - <<'PY'
-import json, subprocess
-from pathlib import Path
-for manifest_path in sorted(Path("build/episodes").glob("EP*/EP*.manifest.json")):
-    m=json.loads(manifest_path.read_text())
-    p=Path(m["artifact"])
-    assert p.exists() and p.stat().st_size > 0, p
-    probe=json.loads(subprocess.check_output([
-        "ffprobe","-v","error","-show_format","-show_streams","-of","json",str(p)
-    ]))
-    video=next(s for s in probe["streams"] if s.get("codec_type")=="video")
-    assert video.get("codec_name")=="h264", (p, video)
-    assert int(video.get("width",0))==720 and int(video.get("height",0))==1280, (p, video)
-    assert 94.5 <= float(probe["format"].get("duration","0")) <= 95.5, (p, probe["format"])
-    subprocess.run(["ffmpeg","-v","error","-i",str(p),"-f","null","-"],check=True)
-    print("verified", p, m["sha256"])
+          import json, subprocess
+          from pathlib import Path
+          for manifest_path in sorted(Path("build/episodes").glob("EP*/EP*.manifest.json")):
+              m=json.loads(manifest_path.read_text())
+              p=Path(m["artifact"])
+              assert p.exists() and p.stat().st_size > 0, p
+              probe=json.loads(subprocess.check_output([
+                  "ffprobe","-v","error","-show_format","-show_streams","-of","json",str(p)
+              ]))
+              video=next(s for s in probe["streams"] if s.get("codec_type")=="video")
+              assert video.get("codec_name")=="h264", (p, video)
+              assert int(video.get("width",0))==720 and int(video.get("height",0))==1280, (p, video)
+              assert 94.5 <= float(probe["format"].get("duration","0")) <= 95.5, (p, probe["format"])
+              subprocess.run(["ffmpeg","-v","error","-i",str(p),"-f","null","-"],check=True)
+              print("verified", p, m["sha256"])
 PY
-      - name: Upload EP02-EP10 evidence artifacts
+                - name: Upload EP02-EP10 evidence artifacts
         uses: actions/upload-artifact@v4
         with:
           name: short-drama-ep02-ep10-fallback-evidence
