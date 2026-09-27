@@ -229,3 +229,13 @@ The codebase passes the local deterministic audit, but production runtime still 
 - New story-source audit: `evidence/story-source-audit-2026-09-27.md`.
 - YouTube release gate now rejects fallback recuts before transport and requires an explicit `CANONICAL_STORY_EPISODE` artifact classification manifest.
 - This closes the previous ambiguity: the nine MP4s are evidence-backed release candidates, not claimed AI-generated canonical episodes.
+
+
+## FINAL CI VERIFICATION — 2026-09-27 23:04 +03:00
+- Fresh GitHub Actions YouTube Agent Audit run 36344910728 completed SUCCESS on commit 06f4b3bc4d9ef28fe7e546861048af3a5b6f51e1.
+- Audit job 108692032063 completed SUCCESS; PYTHONPATH=. python tests/test_youtube_agent.py passed.
+- Fallback generation/verification job 108692032255 completed SUCCESS. The job generated EP02-EP10, verified artifact count/media, and uploaded the evidence artifact successfully.
+- Fresh full audit run 36344910759 completed SUCCESS; all listed audit/test steps completed successfully.
+- This is fresh CI execution evidence and supersedes the earlier statement that the repaired YouTube Agent CI was NOT VERIFIED.
+- External publication remains NOT VERIFIED/BLOCKED because no connected YouTube execution account/OAuth authorization is available. No live publication receipt is claimed.
+- EP02-EP10 remain deterministic fallback release candidates only; the canonical-story publication gate remains closed for them.
