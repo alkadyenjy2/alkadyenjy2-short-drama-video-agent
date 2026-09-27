@@ -6,7 +6,7 @@ deterministic 95s recut of the verified THE LAST VOICEMAIL reference assets.
 The output is intentionally labeled as fallback/recut in its manifest.
 """
 from __future__ import annotations
-import hashlib, json, subprocess
+import hashlib, json, shutil, subprocess
 from pathlib import Path
 
 W,H,FPS=720,1280,24
@@ -71,7 +71,7 @@ def render(ep):
        "-movflags","+faststart",str(v)])
  for i,dur in enumerate(DURS,1):
   a=aud/f"{i:02d}.wav"
-  if i in (2,5,7,9,10):
+  if i in (2,5,7,9,10) and shutil.which("espeak-ng"):
    speaker,text=DIALOGUES[(i//2)%len(DIALOGUES)]
    voice="en-us+f3" if speaker=="Maya" else "en-us+m3"
    raw=aud/f"{i:02d}_raw.wav"
