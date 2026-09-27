@@ -51,3 +51,4 @@ with tempfile.TemporaryDirectory() as d:
 print("YOUTUBE AGENT AUDIT: real-media validation + approval gate PASS")
 
 # CI regression sentinel: ensure the repaired PYTHONPATH workflow is exercised on main.
+# CI sentinel: trigger combined fallback artifact verification.
