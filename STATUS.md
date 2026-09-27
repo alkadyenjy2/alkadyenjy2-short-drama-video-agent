@@ -160,4 +160,4 @@ The codebase passes the local deterministic audit, but production runtime still 
 - Source Shot 1 SHA-256 matches the previously verified real Shot 1: `0F12F280B776B73B1760F00DEE2D55EC6BD5C7DDC8BC39570C34899A8F6D8423`.
 - Publication: `NOT_PERFORMED`.
 - The fallback removes the immediate production dead-end when an AI video provider is unavailable. It is explicitly labeled `DETERMINISTIC_MOTION_FALLBACK`; it does not replace or weaken the external AI video-generation Evidence Gate.
-- GitHub Actions standard runners are free for public repositories, so this fallback does not require Railway, a paid video model, or a local GPU. citeturn1search0turn1search8
+- GitHub Actions standard runners are free for public repositories, so this fallback does not require Railway, a paid video model, or a local GPU.
