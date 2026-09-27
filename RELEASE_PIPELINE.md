@@ -23,15 +23,15 @@ No stage may infer success from source code, a workflow run, HTTP 200, or a plan
 | Episode | Script | Assets | Render | MP4 Evidence | Metadata | Approval | Publish Evidence | Overall |
 |---|---|---|---|---|---|---|---|---|
 | EP01 | READY | READY | GENERATED | GENERATED | READY | BLOCKED | BLOCKED | GENERATED |
-| EP02 | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | BLOCKED | BLOCKED | NOT VERIFIED |
-| EP03 | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | BLOCKED | BLOCKED | NOT VERIFIED |
-| EP04 | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | BLOCKED | BLOCKED | NOT VERIFIED |
-| EP05 | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | BLOCKED | BLOCKED | NOT VERIFIED |
-| EP06 | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | BLOCKED | BLOCKED | NOT VERIFIED |
-| EP07 | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | BLOCKED | BLOCKED | NOT VERIFIED |
-| EP08 | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | BLOCKED | BLOCKED | NOT VERIFIED |
-| EP09 | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | BLOCKED | BLOCKED | NOT VERIFIED |
-| EP10 | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | NOT VERIFIED | BLOCKED | BLOCKED | NOT VERIFIED |
+| EP02 | NOT VERIFIED | NOT VERIFIED | GENERATED | GENERATED | NOT VERIFIED | BLOCKED | BLOCKED | RELEASE CANDIDATE ONLY |
+| EP03 | NOT VERIFIED | NOT VERIFIED | GENERATED | GENERATED | NOT VERIFIED | BLOCKED | BLOCKED | RELEASE CANDIDATE ONLY |
+| EP04 | NOT VERIFIED | NOT VERIFIED | GENERATED | GENERATED | NOT VERIFIED | BLOCKED | BLOCKED | RELEASE CANDIDATE ONLY |
+| EP05 | NOT VERIFIED | NOT VERIFIED | GENERATED | GENERATED | NOT VERIFIED | BLOCKED | BLOCKED | RELEASE CANDIDATE ONLY |
+| EP06 | NOT VERIFIED | NOT VERIFIED | GENERATED | GENERATED | NOT VERIFIED | BLOCKED | BLOCKED | RELEASE CANDIDATE ONLY |
+| EP07 | NOT VERIFIED | NOT VERIFIED | GENERATED | GENERATED | NOT VERIFIED | BLOCKED | BLOCKED | RELEASE CANDIDATE ONLY |
+| EP08 | NOT VERIFIED | NOT VERIFIED | GENERATED | GENERATED | NOT VERIFIED | BLOCKED | BLOCKED | RELEASE CANDIDATE ONLY |
+| EP09 | NOT VERIFIED | NOT VERIFIED | GENERATED | GENERATED | NOT VERIFIED | BLOCKED | BLOCKED | RELEASE CANDIDATE ONLY |
+| EP10 | NOT VERIFIED | NOT VERIFIED | GENERATED | GENERATED | NOT VERIFIED | BLOCKED | BLOCKED | RELEASE CANDIDATE ONLY |
 
 ## YouTube execution gate
 The existing `publisher.py` contains real resumable-upload transport and verification logic. The new `youtube_agent.py` is the approval-gated orchestrator. It will not call the transport unless an explicit approval record exists and real OAuth client/token material is available at runtime.
@@ -46,3 +46,11 @@ Current connector audit: no connected YouTube execution account was found. There
 
 ## Evidence rule
 `READY`, `GENERATED`, `PUBLISHED`, `BLOCKED`, and `NOT VERIFIED` are evidence states, not optimistic labels.
+
+
+## Fallback release-candidate lock — 2026-09-27
+- EP02–EP10 have independently verified local MP4 evidence recorded in `evidence/ep02-ep10-fallback-manifest.json`.
+- They are classified as `DETERMINISTIC_MOTION_FALLBACK_RECUT`, not canonical story episodes.
+- They are not publishable under the canonical story release path.
+- The YouTube orchestrator now requires an artifact sidecar manifest with `artifact_class=CANONICAL_STORY_EPISODE`; fallback recuts are rejected before the publisher transport.
+- Canonical story-source audit: `evidence/story-source-audit-2026-09-27.md`.
