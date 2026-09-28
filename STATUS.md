@@ -269,3 +269,15 @@ The codebase passes the local deterministic audit, but production runtime still 
 - Release classification updated: EP02â€“EP06 are CANONICAL_STORY_EPISODE + DETERMINISTIC_MOTION_RENDER and may pass the artifact gate; EP07â€“EP10 remain locked fallback recuts because no canonical story exists for them.
 - Added .github/workflows/canonical-pilot-fallback-render.yml to reproduce and verify EP02â€“EP06 on the free public GitHub runner and upload evidence artifacts.
 - YouTube publication remains blocked by the independent external-account/OAuth gate; no publication was attempted.
+
+
+## THE ENVELOPE MEDIA QA — 2026-09-28
+- Fresh local audit on Desktop Commander Fattouh completed against the canonical workspace `C:\\Users\\LTC\\short-drama-video-agent\\artifacts\\the-envelope`.
+- Exactly 30 MP4 artifacts were found: EP01–EP30.
+- Every artifact passed FFmpeg full decode (`FFMPEG_DECODE_PASS`).
+- Every artifact is 60.000s, H.264, 720x1280, 24fps, AAC 48kHz stereo.
+- SHA-256 and technical probe evidence were written to `evidence/the-envelope-media-qa-2026-09-28.json`.
+- Artifact class is explicitly `DETERMINISTIC_MOTION_TEXT_FALLBACK`; this is real media evidence, not evidence of cinematic AI generation.
+- Added reproducible `rendering/the_envelope_fallback.py` and `.github/workflows/the-envelope-audit.yml` to the canonical repo. The workflow regenerates all 30 episodes on the free public runner, runs the same media gates, and uploads evidence.
+- A fresh Actions run for the new workflow is not yet exposed by the connected GitHub run reader; therefore CI execution of this new workflow is NOT VERIFIED. The local 30-file audit is VERIFIED.
+- External publication remains blocked independently by platform account/OAuth/approval gates. No publication receipt or public video ID exists.
