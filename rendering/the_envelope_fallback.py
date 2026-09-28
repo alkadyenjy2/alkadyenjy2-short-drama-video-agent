@@ -6,7 +6,7 @@ AI generation. Each episode is 60s, vertical 9:16, H.264/AAC, with original
 series text rendered over a deterministic motion background.
 """
 from __future__ import annotations
-import hashlib, json, subprocess
+import hashlib, json, os, subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -69,15 +69,15 @@ def main():
         hookfile.write_text(hook,encoding="utf-8")
         bodyfile.write_text(body,encoding="utf-8")
         out=OUT/f"{ep}_THE_ENVELOPE.mp4"
-        # Deterministic animated gradient-like motion using two solid color sources,
+        fontfile = "C:/Windows/Fonts/arial.ttf" if os.name == "nt" else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"\n        # Deterministic animated gradient-like motion using two solid color sources,
         # with original text only; no third-party footage or audio.
         vf=(
             "drawbox=x=0:y=0:w=iw:h=ih:color=black@0.18:t=fill,"
-            f"drawtext=text='{ep} - THE ENVELOPE':fontcolor=white:fontsize=30:"
+            f"drawtext=fontfile='{fontfile}':text='{ep} - THE ENVELOPE':fontcolor=white:fontsize=30:"
             "x=(w-text_w)/2:y=80,"
-            f"drawtext=textfile='build/the-envelope/{ep}_hook.txt':fontcolor=white:fontsize=52:"
+            f"drawtext=fontfile='{fontfile}':textfile='build/the-envelope/{ep}_hook.txt':fontcolor=white:fontsize=52:"
             "x=(w-text_w)/2:y=360:line_spacing=12,"
-            f"drawtext=textfile='build/the-envelope/{ep}_body.txt':fontcolor=white:fontsize=42:"
+            f"drawtext=fontfile='{fontfile}':textfile='build/the-envelope/{ep}_body.txt':fontcolor=white:fontsize=42:"
             "x=(w-text_w)/2:y=760:line_spacing=12"
         )
         run(["ffmpeg","-y","-v","error","-f","lavfi","-i",
