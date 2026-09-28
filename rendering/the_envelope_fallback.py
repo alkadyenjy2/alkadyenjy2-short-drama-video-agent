@@ -60,6 +60,7 @@ def probe(path: Path):
     return json.loads(p.stdout)
 
 def main():
+    from PIL import Image, ImageDraw, ImageFont
     OUT.mkdir(parents=True, exist_ok=True)
     records=[]
     for n,(title,hook,body) in enumerate(EPISODES,1):
@@ -68,22 +69,22 @@ def main():
         bodyfile=OUT/f"{ep}_body.txt"
         hookfile.write_text(hook,encoding="utf-8")
         bodyfile.write_text(body,encoding="utf-8")
+        card=Image.new("RGB",(720,1280),(22,32,42))
+        draw=ImageDraw.Draw(card)
+        try:
+            font_big=ImageFont.load_default(size=44)
+            font_mid=ImageFont.load_default(size=34)
+            font_small=ImageFont.load_default(size=28)
+        except TypeError:
+            font_big=font_mid=font_small=ImageFont.load_default()
+        draw.text((360,90),f"{ep} - THE ENVELOPE",fill="white",font=font_small,anchor="ma")
+        draw.multiline_text((60,360),hook,fill="white",font=font_big,anchor="la",spacing=14)
+        draw.multiline_text((60,760),body,fill="white",font=font_mid,anchor="la",spacing=12)
+        cardfile=OUT/f"{ep}_card.png"
+        card.save(cardfile)
         out=OUT/f"{ep}_THE_ENVELOPE.mp4"
-        fontfile = "C:/Windows/Fonts/arial.ttf" if os.name == "nt" else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-        # Deterministic animated gradient-like motion using two solid color sources,
-        # with original text only; no third-party footage or audio.
-        vf=(
-            "drawbox=x=0:y=0:w=iw:h=ih:color=black@0.18:t=fill,"
-            f"drawtext=fontfile='{fontfile}':text='{ep} - THE ENVELOPE':fontcolor=white:fontsize=30:"
-            "x=(w-text_w)/2:y=80,"
-            f"drawtext=fontfile='{fontfile}':textfile='build/the-envelope/{ep}_hook.txt':fontcolor=white:fontsize=52:"
-            "x=(w-text_w)/2:y=360:line_spacing=12,"
-            f"drawtext=fontfile='{fontfile}':textfile='build/the-envelope/{ep}_body.txt':fontcolor=white:fontsize=42:"
-            "x=(w-text_w)/2:y=760:line_spacing=12"
-        )
-        run(["ffmpeg","-y","-v","error","-f","lavfi","-i",
-             "color=c=0x16202A:s=720x1280:r=24","-f","lavfi","-i",
-             "anullsrc=r=48000:cl=stereo","-t","60","-vf",vf,
+        run(["ffmpeg","-y","-v","error","-loop","1","-i",str(cardfile),"-f","lavfi","-i",
+             "anullsrc=r=48000:cl=stereo","-t","60","-r","24",
              "-map","0:v:0","-map","1:a:0","-c:v","libx264","-preset","veryfast",
              "-crf","23","-pix_fmt","yuv420p","-c:a","aac","-b:a","128k",
              "-movflags","+faststart",str(out)])
