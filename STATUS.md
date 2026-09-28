@@ -113,13 +113,13 @@ Still not executable without external credentials/approvals/provider access:
 5. Add actual video-generation provider adapter after its API contract is available.
 6. Run live discovery/analytics only after credentials/permissions are supplied; then capture evidence IDs and timestamps.
 
-## FINAL LOCAL AUDIT — 2026-09-21
+## FINAL LOCAL AUDIT â€” 2026-09-21
 - Desktop Commander cloned and audited the exact GitHub main revision.
 - Python compile: PASS.
 - Dependency imports (python-telegram-bot, FastAPI, Uvicorn): PASS after adding missing runtime dependencies.
 - Bot safe-catalog smoke: PASS; production trend fixture is now empty until live discovery evidence exists.
 - Web app import smoke: PASS.
-- Full deterministic audit suite: PASS — P1 8, discovery 4, idea/rights 3, analytics persistence 1, analytics adapters 2, analytics ingestion 1, learning 2, media/finance 4, Meta Ads/generation 2, repository lifecycle 1, Meta legacy audit 14, TikTok/YouTube legacy audit 17.
+- Full deterministic audit suite: PASS â€” P1 8, discovery 4, idea/rights 3, analytics persistence 1, analytics adapters 2, analytics ingestion 1, learning 2, media/finance 4, Meta Ads/generation 2, repository lifecycle 1, Meta legacy audit 14, TikTok/YouTube legacy audit 17.
 - Repository lifecycle bug fixed: SQLite connections now close explicitly; analytics table is included in health checks; analytics tests close repositories.
 - Fake-success paths fixed in Telegram bot: no stale trend ranking, no fake Muse generation, no fake Preview/Approve/Publish, and edit responses are PLAN_ONLY until a real artifact exists.
 - Stale fixed-ROI dashboard/document claims removed.
@@ -138,7 +138,7 @@ Still not executable without external credentials/approvals/provider access:
 ## RELEASE CANDIDATE BOUNDARY
 The codebase passes the local deterministic audit, but production runtime still requires external credentials/approvals/provider access listed above. No production deployment was performed.
 
-## TIKTOK + YOUTUBE HARDENING — 2026-09-22
+## TIKTOK + YOUTUBE HARDENING â€” 2026-09-22
 - Fresh official-doc audit completed against current TikTok and YouTube documentation.
 - TikTok hardened: credential gate returns `BLOCKED_CREDENTIALS`; explicit error taxonomy; bounded max-3 retry; token sanitization; deterministic platform idempotency key; evidence fields completed; Direct Post receipt requires `PUBLISH_COMPLETE` plus `publicaly_available_post_id`.
 - TikTok OAuth refresh helper added; current TikTok documentation says refresh tokens can rotate, so the returned replacement must be persisted by the external credential layer.
@@ -149,7 +149,7 @@ The codebase passes the local deterministic audit, but production runtime still 
 - Fresh local execution on Desktop Commander device Fattouh at commit `f5b5ec8e96e4baf58b9d8957e58c7abdc5f4821f`: Python 3.14.6; `py_compile` PASS; `tests/test_tiktok_youtube_audit.py` printed `=== Summary: 30 PASS / 0 FAIL ===`. No live credentials or live publishing were used.
 - MetaPublisher, Meta state, Meta persistence, and Meta architecture were not modified by this hardening patch.
 
-## FRESH FREE PRODUCTION FALLBACK — 2026-09-27
+## FRESH FREE PRODUCTION FALLBACK â€” 2026-09-27
 - Added `rendering/episode1_animatic.py` as an isolated deterministic fallback renderer.
 - It does not pretend to be AI video generation: it uses the verified real Shot 1 MP4 plus existing fictional-character/reference stills, FFmpeg Ken-Burns motion, captions, and local `espeak-ng` speech.
 - GitHub Actions public-runner execution completed successfully: run `36333723374`, job `108660451880`.
@@ -163,14 +163,14 @@ The codebase passes the local deterministic audit, but production runtime still 
 - GitHub Actions standard runners are free for public repositories, so this fallback does not require Railway, a paid video model, or a local GPU.
 
 
-## RIGHTS / PROVENANCE EVIDENCE — 2026-09-27
+## RIGHTS / PROVENANCE EVIDENCE â€” 2026-09-27
 - CreativeClaw Terms of Service (updated 2026-09-13) state that CreativeClaw does not claim ownership of generated Output and permits commercial use, while placing responsibility for third-party rights on the user.
 - Higgsfield Terms of Use (updated 2026-07-26) state that Higgsfield does not claim ownership of Outputs and does not restrict commercial use; users remain responsible for third-party rights and applicable AI disclosure.
 - The Episode 1 fictional character prompts explicitly excluded celebrity/real-person resemblance.
 - Publication remains disabled until the separate publication approval/evidence gate is satisfied.
 
 
-## PRODUCTION PIPELINE AUDIT — 2026-09-27
+## PRODUCTION PIPELINE AUDIT â€” 2026-09-27
 - Canonical repo verified: `alkadyenjy2/alkadyenjy2-short-drama-video-agent`, public, default branch `main`.
 - Latest repo revision after this audit work: `d17f3d506b881793731190d412a5315d71bf2c03`.
 - Existing deterministic audit evidence remains valid: latest full Python audit run `36335553519` completed SUCCESS; prior TikTok/YouTube audit run `35662151553` completed SUCCESS with the documented 30 PASS / 0 FAIL suite. No claim is made that these tests prove live provider execution.
@@ -185,24 +185,24 @@ The codebase passes the local deterministic audit, but production runtime still 
 - Release status taxonomy: READY = stage prerequisites verified; GENERATED = real artifact exists; PUBLISHED = real platform receipt + verification exists; BLOCKED = required external gate unavailable; NOT VERIFIED = evidence insufficient.
 
 
-## EVIDENCE CORRECTION — 2026-09-27
+## EVIDENCE CORRECTION â€” 2026-09-27
 - The latest GitHub Actions Episode 1 render run `36333867611` is the canonical reproducible artifact evidence for the repository.
 - Its manifest reports 95.000s, H.264 720x1280 24fps, AAC 48kHz stereo, `FFMPEG_DECODE_PASS`, 4,205,506 MP4 bytes, SHA-256 `A638A844C6D95CDDF8B6CAC8B82DE94AEB23F101A55BB94009FFD7993CF47581`.
 - The uploaded artifact exists as GitHub Actions artifact `10936862104` (ZIP containing MP4 + manifest; 4,210,961 bytes). The artifact ZIP digest is `43d4d583c2d0de90d7f46ddc474f6790bab2250f74a565b86bf7e26415d74bdc`.
 - An earlier local artifact hash recorded elsewhere (`8556...`) is not used as current canonical evidence because the latest reproducible CI render has different bytes. No publication claim is attached to either artifact.
 
 
-## FINAL EXECUTION AUDIT — 2026-09-27 20:45 +03:00
+## FINAL EXECUTION AUDIT â€” 2026-09-27 20:45 +03:00
 - Latest repository HEAD after execution fixes: `103f84bcd11d57922256e405f2c0dc5ba34c3e3a` (documentation-only final-audit update).
 - YouTube Agent CI regression was diagnosed from GitHub Actions run `36337790527`: the test failed because the repository root was not on `sys.path`. Fixed in commit `56279d223593a946935816096168c9df01019578` by invoking the test with `PYTHONPATH=.`; added a missing-file MP4 gate assertion in `2b0270a282ea5aa097cea6fda2575e28dc8bdbbb`.
 - Fresh Actions evidence for the repaired HEAD was not exposed by the connected GitHub connector at audit time; therefore the repaired YouTube Agent CI is NOT VERIFIED, not marked PASS.
 - Railway audit found two pre-existing services named `short-drama-video-agen`, both sourced from the non-canonical repository name `alkadyenjy2/short-drama-video-agen`. The active Docker service deployment `b8c071cd-0aa0-45ba-9903-d92c92f23de3` is CRASHED because Telegram rejected the configured BOT_TOKEN. This is stale/non-canonical infrastructure and was not repointed or overwritten.
 - Canonical production publication remains unverified: no connected YouTube execution account was available, and no live publication was attempted.
 - Canonical real-media evidence remains EP01 deterministic fallback: 95.000s H.264 720x1280/AAC artifact, SHA-256 `A638A844C6D95CDDF8B6CAC8B82DE94AEB23F101A55BB94009FFD7993CF47581`, FFmpeg decode PASS, publication NOT_PERFORMED.
-- EP02–EP10 remain NOT VERIFIED; the release orchestrator hard-caps publication at 10 episodes and independently gates each episode.
+- EP02â€“EP10 remain NOT VERIFIED; the release orchestrator hard-caps publication at 10 episodes and independently gates each episode.
 
 
-## EP02-EP10 FALLBACK ARTIFACT EXECUTION — 2026-09-27
+## EP02-EP10 FALLBACK ARTIFACT EXECUTION â€” 2026-09-27
 - Fresh local execution was performed on Desktop Commander device Fattouh against canonical main revision 6de63167803caf86e6bf298be31113496a3fee0d.
 - The new renderer rendering/batch_fallback.py generated exactly 9 real MP4 artifacts: EP02 through EP10; no EP11+ artifact was generated.
 - Every artifact is 95.000s, H.264 720x1280 at 24fps, AAC audio, and passed full FFmpeg decode validation (returncode=0).
@@ -221,17 +221,17 @@ The codebase passes the local deterministic audit, but production runtime still 
 - YouTube/TikTok/Meta publication remains BLOCKED/NOT_PERFORMED; no publication receipt exists.
 
 
-## STORY SOURCE AUDIT + FALLBACK LOCK — 2026-09-27
-- Canonical repo inspection found no stored canonical scripts/story package for EP02–EP10. `trending_stories.json` is empty, and `visual_factory.py` only consumes a supplied story outline.
-- Therefore EP02–EP10 were not promoted to canonical story episodes. No story continuity was fabricated.
-- EP02–EP10 remain real, locally verified deterministic fallback MP4 artifacts with SHA-256 evidence in `evidence/ep02-ep10-fallback-manifest.json`.
+## STORY SOURCE AUDIT + FALLBACK LOCK â€” 2026-09-27
+- Canonical repo inspection found no stored canonical scripts/story package for EP02â€“EP10. `trending_stories.json` is empty, and `visual_factory.py` only consumes a supplied story outline.
+- Therefore EP02â€“EP10 were not promoted to canonical story episodes. No story continuity was fabricated.
+- EP02â€“EP10 remain real, locally verified deterministic fallback MP4 artifacts with SHA-256 evidence in `evidence/ep02-ep10-fallback-manifest.json`.
 - New lock: `evidence/ep02-ep10-release-candidates.json` classifies all nine as `RELEASE_CANDIDATE_FALLBACK` and publication_allowed=false.
 - New story-source audit: `evidence/story-source-audit-2026-09-27.md`.
 - YouTube release gate now rejects fallback recuts before transport and requires an explicit `CANONICAL_STORY_EPISODE` artifact classification manifest.
 - This closes the previous ambiguity: the nine MP4s are evidence-backed release candidates, not claimed AI-generated canonical episodes.
 
 
-## FINAL CI VERIFICATION — 2026-09-27 23:04 +03:00
+## FINAL CI VERIFICATION â€” 2026-09-27 23:04 +03:00
 - Fresh GitHub Actions YouTube Agent Audit run 36344910728 completed SUCCESS on commit 06f4b3bc4d9ef28fe7e546861048af3a5b6f51e1.
 - Audit job 108692032063 completed SUCCESS; PYTHONPATH=. python tests/test_youtube_agent.py passed.
 - Fallback generation/verification job 108692032255 completed SUCCESS. The job generated EP02-EP10, verified artifact count/media, and uploaded the evidence artifact successfully.
@@ -241,7 +241,7 @@ The codebase passes the local deterministic audit, but production runtime still 
 - EP02-EP10 remain deterministic fallback release candidates only; the canonical-story publication gate remains closed for them.
 
 
-## FRESH PUBLICATION EXECUTOR AUDIT — 2026-09-28 00:31 +03:00
+## FRESH PUBLICATION EXECUTOR AUDIT â€” 2026-09-28 00:31 +03:00
 - xpost account discovery was rechecked and returned an empty account list; its connector explicitly reports that no social account is connected, so no platform can receive a post through that route.
 - Canonical Desktop Commander workspace `C:\\Users\\LTC\\short-drama-video-agent` is clean on `main`.
 - Fresh local environment inspection found no YouTube client ID, client secret, refresh token, or API key environment variables, and no matching local credential/token JSON files were found in the canonical repo.
@@ -250,9 +250,22 @@ The codebase passes the local deterministic audit, but production runtime still 
 - Result: `PUBLISH = BLOCKED_EXTERNAL_AUTH`. The fail-closed publication gate remains intact.
 
 
-## AUTONOMOUS PUBLICATION ROUTE RECHECK — 2026-09-28
+## AUTONOMOUS PUBLICATION ROUTE RECHECK â€” 2026-09-28
 - xpost account discovery remains empty and its connection-issues list is empty; there is no connected social account to repair or publish through.
 - Public inspection of the xpost accounts URL confirmed that account connection options are behind authentication; no anonymous/direct platform connection route is exposed.
 - No login, credential entry, post creation, or publication side effect was performed.
 - Browser inspection was used only to verify the blocker; the canonical release gate remains fail-closed.
 - Result remains: PUBLISH = BLOCKED_EXTERNAL_AUTH.
+## CANONICAL PILOT PRODUCTION COMPLETION â€” 2026-09-28
+- Recovered the canonical Pilot 001 story source from Notion: THE LAST VOICEMAIL, six-episode pilot, with Episodes 2â€“6 story spine and locked Maya/Daniel/Unknown Caller continuity.
+- Added rendering/canonical_pilot_fallback.py. It produces canonical story episodes using deterministic motion fallback; it does not claim AI video generation.
+- Locally generated and independently verified real MP4 artifacts for EP02â€“EP06: exactly five episodes, each 95.0s, with FFmpeg decode PASS.
+- EP02 SHA-256: F7DF28424A1A35A842D8E0BBFE8ADE8B2CE91D61097F917F52031ECFBDEB6080
+- EP03 SHA-256: 9DA700E1801E87D91DCFB184B72890EBBF0E81AF34B018457CE67CAD1E5A41D5
+- EP04 SHA-256: 4FDCB5A881F54C8A84E8C2DE844BDFE222560B802223A23FB2F89FC2E33956B7
+- EP05 SHA-256: 96B0C96912B0F1C8C6B0A2CC024F6841650014BF805A08ED54F777039B09AD19
+- EP06 SHA-256: 29B5F5DBB65D5CC9114B07572B346F046244ABAA5EE0B52460ED840B170BEEC3
+- Evidence manifest: evidence/canonical-pilot-ep02-ep06-manifest.json.
+- Release classification updated: EP02â€“EP06 are CANONICAL_STORY_EPISODE + DETERMINISTIC_MOTION_RENDER and may pass the artifact gate; EP07â€“EP10 remain locked fallback recuts because no canonical story exists for them.
+- Added .github/workflows/canonical-pilot-fallback-render.yml to reproduce and verify EP02â€“EP06 on the free public GitHub runner and upload evidence artifacts.
+- YouTube publication remains blocked by the independent external-account/OAuth gate; no publication was attempted.

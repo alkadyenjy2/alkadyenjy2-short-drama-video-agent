@@ -58,6 +58,14 @@ with tempfile.TemporaryDirectory() as d:
     )
     assert artifact_publish_classification(str(canonical))["status"] == "READY"
 
+    canonical_fallback = Path(d) / "THE_LAST_VOICEMAIL_EP02_Canonical_Fallback.mp4"
+    canonical_fallback.write_bytes(b"placeholder")
+    canonical_fallback.with_suffix(".manifest.json").write_text(
+        '{"episode":"EP02","artifact_class":"CANONICAL_STORY_EPISODE","mode":"DETERMINISTIC_MOTION_RENDER"}',
+        encoding="utf-8",
+    )
+    assert artifact_publish_classification(str(canonical_fallback))["status"] == "READY"
+
     if shutil.which("ffmpeg"):
         real = Path(d) / "real.mp4"
         subprocess.run(

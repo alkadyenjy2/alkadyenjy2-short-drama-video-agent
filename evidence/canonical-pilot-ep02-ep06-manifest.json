@@ -1,0 +1,15 @@
+{
+  "story_source": "https://app.notion.com/p/3e00199a7db0811cb15af6dcf5ab5752",
+  "artifact_class": "CANONICAL_STORY_EPISODE",
+  "mode": "DETERMINISTIC_MOTION_RENDER",
+  "episodes": [
+    {"episode":"EP02","title":"8:17","duration_sec":95.0,"size_bytes":5051140,"sha256":"F7DF28424A1A35A842D8E0BBFE8ADE8B2CE91D61097F917F52031ECFBDEB6080","decode":"FFMPEG_DECODE_PASS"},
+    {"episode":"EP03","title":"The Photo","duration_sec":95.0,"size_bytes":5072701,"sha256":"9DA700E1801E87D91DCFB184B72890EBBF0E81AF34B018457CE67CAD1E5A41D5","decode":"FFMPEG_DECODE_PASS"},
+    {"episode":"EP04","title":"The Lie","duration_sec":95.0,"size_bytes":4978747,"sha256":"4FDCB5A881F54C8A84E8C2DE844BDFE222560B802223A23FB2F89FC2E33956B7","decode":"FFMPEG_DECODE_PASS"},
+    {"episode":"EP05","title":"The Source","duration_sec":95.0,"size_bytes":5095874,"sha256":"96B0C96912B0F1C8C6B0A2CC024F6841650014BF805A08ED54F777039B09AD19","decode":"FFMPEG_DECODE_PASS"},
+    {"episode":"EP06","title":"The Last Voicemail","duration_sec":95.0,"size_bytes":5019940,"sha256":"29B5F5DBB65D5CC9114B07572B346F046244ABAA5EE0B52460ED840B170BEEC3","decode":"FFMPEG_DECODE_PASS"}
+  ],
+  "local_verification": "CANONICAL_PILOT_LOCAL_EVIDENCE_PASS",
+  "ai_video_generation": false,
+  "publication": "NOT_PERFORMED"
+}

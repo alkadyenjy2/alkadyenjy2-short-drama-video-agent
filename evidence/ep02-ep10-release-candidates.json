@@ -1,18 +1,20 @@
 {
-  "release_type": "RELEASE_CANDIDATES_ONLY",
+  "release_type": "CANONICAL_PILOT_RELEASE_CANDIDATES",
   "hard_cap": 10,
-  "canonical_story_source_verified": false,
+  "canonical_story_source_verified": true,
+  "story_source": "https://app.notion.com/p/3e00199a7db0811cb15af6dcf5ab5752",
+  "canonical_episodes": ["EP01","EP02","EP03","EP04","EP05","EP06"],
   "episodes": [
-    {"episode":"EP02","artifact_class":"RELEASE_CANDIDATE_FALLBACK","mode":"DETERMINISTIC_MOTION_FALLBACK_RECUT","publication_allowed":false},
-    {"episode":"EP03","artifact_class":"RELEASE_CANDIDATE_FALLBACK","mode":"DETERMINISTIC_MOTION_FALLBACK_RECUT","publication_allowed":false},
-    {"episode":"EP04","artifact_class":"RELEASE_CANDIDATE_FALLBACK","mode":"DETERMINISTIC_MOTION_FALLBACK_RECUT","publication_allowed":false},
-    {"episode":"EP05","artifact_class":"RELEASE_CANDIDATE_FALLBACK","mode":"DETERMINISTIC_MOTION_FALLBACK_RECUT","publication_allowed":false},
-    {"episode":"EP06","artifact_class":"RELEASE_CANDIDATE_FALLBACK","mode":"DETERMINISTIC_MOTION_FALLBACK_RECUT","publication_allowed":false},
+    {"episode":"EP02","artifact_class":"CANONICAL_STORY_EPISODE","mode":"DETERMINISTIC_MOTION_RENDER","publication_allowed":true},
+    {"episode":"EP03","artifact_class":"CANONICAL_STORY_EPISODE","mode":"DETERMINISTIC_MOTION_RENDER","publication_allowed":true},
+    {"episode":"EP04","artifact_class":"CANONICAL_STORY_EPISODE","mode":"DETERMINISTIC_MOTION_RENDER","publication_allowed":true},
+    {"episode":"EP05","artifact_class":"CANONICAL_STORY_EPISODE","mode":"DETERMINISTIC_MOTION_RENDER","publication_allowed":true},
+    {"episode":"EP06","artifact_class":"CANONICAL_STORY_EPISODE","mode":"DETERMINISTIC_MOTION_RENDER","publication_allowed":true},
     {"episode":"EP07","artifact_class":"RELEASE_CANDIDATE_FALLBACK","mode":"DETERMINISTIC_MOTION_FALLBACK_RECUT","publication_allowed":false},
     {"episode":"EP08","artifact_class":"RELEASE_CANDIDATE_FALLBACK","mode":"DETERMINISTIC_MOTION_FALLBACK_RECUT","publication_allowed":false},
     {"episode":"EP09","artifact_class":"RELEASE_CANDIDATE_FALLBACK","mode":"DETERMINISTIC_MOTION_FALLBACK_RECUT","publication_allowed":false},
     {"episode":"EP10","artifact_class":"RELEASE_CANDIDATE_FALLBACK","mode":"DETERMINISTIC_MOTION_FALLBACK_RECUT","publication_allowed":false}
   ],
-  "evidence_manifest": "evidence/ep02-ep10-fallback-manifest.json",
+  "canonical_evidence": "evidence/canonical-pilot-ep02-ep06-manifest.json",
   "story_source_audit": "evidence/story-source-audit-2026-09-27.md"
 }

@@ -1,0 +1,39 @@
+name: canonical-pilot-fallback-render
+on:
+  push:
+    paths:
+      - rendering/canonical_pilot_fallback.py
+      - .github/workflows/canonical-pilot-fallback-render.yml
+  workflow_dispatch:
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install render dependencies
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg espeak-ng
+      - name: Render canonical Pilot 001 episodes
+        run: python rendering/canonical_pilot_fallback.py
+      - name: Verify canonical episode artifacts
+        run: |
+          python - <<'PY'
+          import json, pathlib, subprocess
+          root=pathlib.Path("build/canonical_pilot")
+          eps=sorted(root.glob("EP*/THE_LAST_VOICEMAIL_EP*_Canonical_Fallback.mp4"))
+          manifests=sorted(root.glob("EP*/EP*.manifest.json"))
+          assert [p.parent.name for p in eps] == [f"EP{i:02d}" for i in range(2,7)]
+          assert len(manifests) == 5
+          for m in manifests:
+              d=json.loads(m.read_text())
+              assert d["artifact_class"]=="CANONICAL_STORY_EPISODE"
+              assert d["mode"]=="DETERMINISTIC_MOTION_RENDER"
+              assert d["decode"]=="FFMPEG_DECODE_PASS"
+              assert 94.5 <= d["duration_sec"] <= 95.5
+              subprocess.run(["ffmpeg","-v","error","-i",d["artifact"],"-f","null","-"],check=True)
+          print("CANONICAL_PILOT_EVIDENCE_GATE_PASS")
+          PY
+      - name: Upload canonical pilot evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: canonical-pilot-episodes-2-6
+          path: build/canonical_pilot/EP*/THE_LAST_VOICEMAIL_EP*_Canonical_Fallback.mp4
