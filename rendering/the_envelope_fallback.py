@@ -83,8 +83,14 @@ def main():
         cardfile=OUT/f"{ep}_card.png"
         card.save(cardfile)
         out=OUT/f"{ep}_THE_ENVELOPE.mp4"
-        run(["ffmpeg","-y","-v","error","-loop","1","-i",str(cardfile),"-f","lavfi","-i",
-             "anullsrc=r=48000:cl=stereo","-t","60","-r","24",
+        raw=OUT/f"{ep}_voice_raw.wav"
+        ps=OUT/f"{ep}_voice.ps1"
+        narration=(hook+" "+body).replace('"','""')
+        ps.write_text('Add-Type -AssemblyName System.Speech\\n' '$s=New-Object System.Speech.Synthesis.SpeechSynthesizer\\n' f'$s.SetOutputToWaveFile("{str(raw)}")\\n' f'$s.Speak("{narration}")\\n' '$s.Dispose()\\n',encoding="utf-8")
+        run(["powershell","-NoProfile","-ExecutionPolicy","Bypass","-File",str(ps)])
+        ps.unlink(missing_ok=True)
+        run(["ffmpeg","-y","-v","error","-loop","1","-i",str(cardfile),"-i",str(raw),
+             "-af","apad=pad_dur=60","-t","60","-r","24",
              "-map","0:v:0","-map","1:a:0","-c:v","libx264","-preset","veryfast",
              "-crf","23","-pix_fmt","yuv420p","-c:a","aac","-b:a","128k",
              "-movflags","+faststart",str(out)])
@@ -93,6 +99,9 @@ def main():
                            capture_output=True,text=True)
         if dec.returncode:
             raise RuntimeError(f"decode failed: {out}: {dec.stderr[-1000:]}")
+        vol=subprocess.run(["ffmpeg","-v","info","-i",str(out),"-af","volumedetect","-f","null","NUL"],capture_output=True,text=True)
+        if "mean_volume: -inf" in vol.stderr:
+            raise RuntimeError(f"AUDIO_SILENCE_GATE_FAILED: {out}")
         dur=float(p["format"]["duration"])
         streams=p["streams"]
         v=next(s for s in streams if s.get("codec_type")=="video")
