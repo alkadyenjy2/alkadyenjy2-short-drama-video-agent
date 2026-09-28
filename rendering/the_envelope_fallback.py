@@ -73,11 +73,11 @@ def main():
         # with original text only; no third-party footage or audio.
         vf=(
             "drawbox=x=0:y=0:w=iw:h=ih:color=black@0.18:t=fill,"
-            f"drawtext=text='{ep}  |  THE ENVELOPE':fontcolor=white:fontsize=30:"
+            f"drawtext=text='{ep} - THE ENVELOPE':fontcolor=white:fontsize=30:"
             "x=(w-text_w)/2:y=80,"
-            f"drawtext=textfile='{hookfile.as_posix()}':fontcolor=white:fontsize=52:"
+            f"drawtext=textfile='build/the-envelope/{ep}_hook.txt':fontcolor=white:fontsize=52:"
             "x=(w-text_w)/2:y=360:line_spacing=12,"
-            f"drawtext=textfile='{bodyfile.as_posix()}':fontcolor=white:fontsize=42:"
+            f"drawtext=textfile='build/the-envelope/{ep}_body.txt':fontcolor=white:fontsize=42:"
             "x=(w-text_w)/2:y=760:line_spacing=12"
         )
         run(["ffmpeg","-y","-v","error","-f","lavfi","-i",
