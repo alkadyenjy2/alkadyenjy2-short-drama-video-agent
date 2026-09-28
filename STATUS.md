@@ -281,3 +281,11 @@ The codebase passes the local deterministic audit, but production runtime still 
 - Added reproducible `rendering/the_envelope_fallback.py` and `.github/workflows/the-envelope-audit.yml` to the canonical repo. The workflow regenerates all 30 episodes on the free public runner, runs the same media gates, and uploads evidence.
 - A fresh Actions run for the new workflow is not yet exposed by the connected GitHub run reader; therefore CI execution of this new workflow is NOT VERIFIED. The local 30-file audit is VERIFIED.
 - External publication remains blocked independently by platform account/OAuth/approval gates. No publication receipt or public video ID exists.
+
+
+## REPRODUCIBLE ENVELOPE RENDERER HARDENING — 2026-09-28
+- Latest canonical HEAD: `76c064b4f80e7443a94d5cfa1786c07b48845e15`.
+- `rendering/the_envelope_fallback.py` was hardened to use Pillow-generated text cards, avoiding platform-specific FFmpeg font/path behavior on Windows and Linux.
+- `.github/workflows/the-envelope-audit.yml` installs Pillow and regenerates/validates all 30 episodes on a free public GitHub runner.
+- Local execution of the new renderer was started on Fattouh; the connected Desktop Commander reader does not currently expose a completed process result. Therefore the new renderer's local end-to-end execution is NOT VERIFIED here; the previously completed independent 30-file media QA remains VERIFIED.
+- No external publication was performed.
