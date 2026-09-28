@@ -69,7 +69,8 @@ def main():
         hookfile.write_text(hook,encoding="utf-8")
         bodyfile.write_text(body,encoding="utf-8")
         out=OUT/f"{ep}_THE_ENVELOPE.mp4"
-        fontfile = "C:/Windows/Fonts/arial.ttf" if os.name == "nt" else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"\n        # Deterministic animated gradient-like motion using two solid color sources,
+        fontfile = "C:/Windows/Fonts/arial.ttf" if os.name == "nt" else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+        # Deterministic animated gradient-like motion using two solid color sources,
         # with original text only; no third-party footage or audio.
         vf=(
             "drawbox=x=0:y=0:w=iw:h=ih:color=black@0.18:t=fill,"
