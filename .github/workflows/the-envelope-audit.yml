@@ -1,0 +1,48 @@
+name: THE ENVELOPE Media QA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "rendering/the_envelope_fallback.py"
+      - ".github/workflows/the-envelope-audit.yml"
+      - "research/series-001-30x60s-production.md"
+jobs:
+  render-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Generate 30 deterministic fallback episodes
+        run: python rendering/the_envelope_fallback.py
+      - name: Verify release media gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(find build/the-envelope -maxdepth 1 -name 'EP*_THE_ENVELOPE.mp4' | wc -l)" -eq 30
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          m=json.loads(Path("build/the-envelope/manifest.json").read_text())
+          assert m["episode_count"] == 30
+          assert m["all_decode_pass"] is True
+          assert len(m["artifacts"]) == 30
+          for a in m["artifacts"]:
+              assert a["duration_sec"] >= 59.9 and a["duration_sec"] <= 60.1
+              assert (a["width"],a["height"]) == (720,1280)
+              assert a["video_codec"] == "h264"
+              assert a["audio_codec"] == "aac"
+              assert a["decode"] == "FFMPEG_DECODE_PASS"
+              assert len(a["sha256"]) == 64
+          print("THE_ENVELOPE_MEDIA_QA_PASS")
+          PY
+      - name: Upload evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: the-envelope-30-episode-media-evidence
+          path: build/the-envelope/
+          if-no-files-found: error
