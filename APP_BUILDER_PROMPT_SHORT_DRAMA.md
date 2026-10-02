@@ -31,3 +31,17 @@ First commercial proof = one genuinely playable acted episode + organic audience
 
 FINAL REPORT
 Exact commit, render evidence, artifact hashes where available, media QA, provider state, publication receipt or blocker, analytics state, changed files, UNVERIFIED items.
+
+
+BUILDER LOCK — DO NOT WASTE CREDITS
+1. This is a canonical existing repository handoff, NOT a blank-app request.
+2. Import/inspect the named canonical repository first. Do not start from a template and do not create a duplicate application.
+3. Reuse the existing code, database, auth, integrations, agents, workflows and deployment boundaries described above. Do not migrate frameworks or databases unless this document explicitly says so.
+4. Work only on concrete remaining gaps. If a requirement is already implemented and verified, leave it unchanged.
+5. Never create fake users, leads, scholarships, webhooks, provider receipts, uploads, views, revenue, analytics or “demo” production evidence.
+6. Never spend builder credits on cosmetic rewrites, speculative refactors, or proof that can be obtained from existing repository/runtime evidence.
+7. Keep all missing external credentials/configuration explicitly NOT CONFIGURED/BLOCKED. Do not replace them with mocks.
+8. Required finish loop: AUDIT → REUSE → CONNECT → IMPLEMENT only where needed → VERIFY → FIX → VERIFY → FINAL AUDIT.
+9. Before finishing, produce: exact commit SHA, changed files, tests/build results, deployment/runtime result, configured vs unconfigured integrations, and every remaining external gate.
+10. If the code is already complete for the requested scope, STOP changing code and report code-side closure instead of consuming more credits.
+11. Preferred execution surface for these existing repos: Replit Agent with GitHub import/sync. Use Lovable only for a deliberately separate visual prototype/reference; never let it replace the canonical backend/runtime.
