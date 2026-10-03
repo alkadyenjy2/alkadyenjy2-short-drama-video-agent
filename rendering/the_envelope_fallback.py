@@ -49,9 +49,10 @@ def run(cmd):
 
 def build_narration_command(text: str, raw_path: Path) -> list[str]:
     if shutil.which("powershell"):
+        escaped = text.replace("'", "''")
         return ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
                 "$s=New-Object System.Speech.Synthesis.SpeechSynthesizer; "
-                f"$s.SetOutputToWaveFile('{raw_path}'); $s.Speak('{text.replace("'", "''")}'); $s.Dispose()"]
+                f"$s.SetOutputToWaveFile('{raw_path}'); $s.Speak('{escaped}'); $s.Dispose()"]
     if shutil.which("espeak-ng"):
         return ["espeak-ng", "-w", str(raw_path), text]
     raise RuntimeError("NARRATION_ENGINE_UNAVAILABLE")
