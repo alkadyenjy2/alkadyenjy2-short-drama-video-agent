@@ -52,4 +52,4 @@ jobs:
           path: build/the-envelope/
           if-no-files-found: error
 
-# Evidence trigger: comment-only workflow change to execute the canonical QA against current main.
+# Evidence trigger: canonical QA trigger refreshed 2026-10-03; no product behavior change.
