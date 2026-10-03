@@ -1,5 +1,8 @@
+import sys
 import unittest
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
 from unittest.mock import patch
 
 from the_envelope_fallback import build_narration_command
