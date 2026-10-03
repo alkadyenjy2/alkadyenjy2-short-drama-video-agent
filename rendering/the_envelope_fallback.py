@@ -6,7 +6,7 @@ AI generation. Each episode is 60s, vertical 9:16, H.264/AAC, with original
 series text rendered over a deterministic motion background.
 """
 from __future__ import annotations
-import hashlib, json, os, subprocess
+import hashlib, json, os, shutil, subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -47,6 +47,16 @@ EPISODES = [
 def run(cmd):
     subprocess.run(cmd, check=True)
 
+def build_narration_command(text: str, raw_path: Path) -> list[str]:
+    if shutil.which("powershell"):
+        return ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
+                "$s=New-Object System.Speech.Synthesis.SpeechSynthesizer; "
+                f"$s.SetOutputToWaveFile('{raw_path}'); $s.Speak('{text.replace("'", "''")}'); $s.Dispose()"]
+    if shutil.which("espeak-ng"):
+        return ["espeak-ng", "-w", str(raw_path), text]
+    raise RuntimeError("NARRATION_ENGINE_UNAVAILABLE")
+
+
 def sha256(path: Path) -> str:
     h=hashlib.sha256()
     with path.open("rb") as f:
@@ -84,11 +94,8 @@ def main():
         card.save(cardfile)
         out=OUT/f"{ep}_THE_ENVELOPE.mp4"
         raw=OUT/f"{ep}_voice_raw.wav"
-        ps=OUT/f"{ep}_voice.ps1"
-        narration=(hook+" "+body).replace('"','""')
-        ps.write_text('Add-Type -AssemblyName System.Speech\\n' '$s=New-Object System.Speech.Synthesis.SpeechSynthesizer\\n' f'$s.SetOutputToWaveFile("{str(raw)}")\\n' f'$s.Speak("{narration}")\\n' '$s.Dispose()\\n',encoding="utf-8")
-        run(["powershell","-NoProfile","-ExecutionPolicy","Bypass","-File",str(ps)])
-        ps.unlink(missing_ok=True)
+        narration=hook+" "+body
+        run(build_narration_command(narration, raw))
         run(["ffmpeg","-y","-v","error","-loop","1","-i",str(cardfile),"-i",str(raw),
              "-af","apad=pad_dur=60","-t","60","-r","24",
              "-map","0:v:0","-map","1:a:0","-c:v","libx264","-preset","veryfast",
@@ -99,7 +106,7 @@ def main():
                            capture_output=True,text=True)
         if dec.returncode:
             raise RuntimeError(f"decode failed: {out}: {dec.stderr[-1000:]}")
-        vol=subprocess.run(["ffmpeg","-v","info","-i",str(out),"-af","volumedetect","-f","null","NUL"],capture_output=True,text=True)
+        vol=subprocess.run(["ffmpeg","-v","info","-i",str(out),"-af","volumedetect","-f","null",os.devnull],capture_output=True,text=True)
         if "mean_volume: -inf" in vol.stderr:
             raise RuntimeError(f"AUDIO_SILENCE_GATE_FAILED: {out}")
         dur=float(p["format"]["duration"])
