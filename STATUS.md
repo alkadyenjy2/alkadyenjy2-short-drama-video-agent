@@ -289,3 +289,12 @@ The codebase passes the local deterministic audit, but production runtime still 
 - `.github/workflows/the-envelope-audit.yml` installs Pillow and regenerates/validates all 30 episodes on a free public GitHub runner.
 - Local execution of the new renderer was started on Fattouh; the connected Desktop Commander reader does not currently expose a completed process result. Therefore the new renderer's local end-to-end execution is NOT VERIFIED here; the previously completed independent 30-file media QA remains VERIFIED.
 - No external publication was performed.
+
+
+## PORTFOLIO CLOSURE PASS — 2026-10-04
+- Latest canonical main revision verified: `9d5ed70afd1a34ec7b180d1e31d7e749d9356598`.
+- THE ENVELOPE text-clipping regression is fixed with an explicit wrapping regression test in the same commit.
+- Fresh Media QA evidence already recorded for exactly 30 EP01–EP30 fallback MP4 artifacts: 60s, H.264 720x1280, 24fps, AAC stereo, FFmpeg full decode PASS.
+- Engineering/media closure is therefore not blocked by a remaining repository defect.
+- Publication remains fail-closed and is NOT claimed: YouTube OAuth/account and explicit release approval are external human gates; no fake publication receipt is accepted.
+- No new platform post, credential, or paid generation was performed in this closure pass.
