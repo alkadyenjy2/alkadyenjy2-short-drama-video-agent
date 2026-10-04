@@ -6,7 +6,7 @@ AI generation. Each episode is 60s, vertical 9:16, H.264/AAC, with original
 series text rendered over a deterministic motion background.
 """
 from __future__ import annotations
-import hashlib, json, os, shutil, subprocess
+import hashlib, json, os, shutil, subprocess, textwrap
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -46,6 +46,10 @@ EPISODES = [
 
 def run(cmd):
     subprocess.run(cmd, check=True)
+
+
+def wrap_text(text: str, width: int) -> str:
+    return "\n".join(textwrap.wrap(text, width=width, break_long_words=False, break_on_hyphens=False))
 
 def build_narration_command(text: str, raw_path: Path) -> list[str]:
     if shutil.which("powershell"):
@@ -89,8 +93,8 @@ def main():
         except TypeError:
             font_big=font_mid=font_small=ImageFont.load_default()
         draw.text((360,90),f"{ep} - THE ENVELOPE",fill="white",font=font_small,anchor="ma")
-        draw.multiline_text((60,360),hook,fill="white",font=font_big,anchor="la",spacing=14)
-        draw.multiline_text((60,760),body,fill="white",font=font_mid,anchor="la",spacing=12)
+        draw.multiline_text((60,360),wrap_text(hook, 28),fill="white",font=font_big,anchor="la",spacing=14)
+        draw.multiline_text((60,760),wrap_text(body, 30),fill="white",font=font_mid,anchor="la",spacing=12)
         cardfile=OUT/f"{ep}_card.png"
         card.save(cardfile)
         out=OUT/f"{ep}_THE_ENVELOPE.mp4"
