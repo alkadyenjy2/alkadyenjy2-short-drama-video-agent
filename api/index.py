@@ -7,6 +7,18 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 from web_app import app
+
+@app.middleware("http")
+async def normalize_vercel_path(request, call_next):
+    path = request.scope.get("path", "")
+    for prefix in ("/api/index.py", "/api/index", "/api"):
+        if path == prefix:
+            request.scope["path"] = "/"
+            break
+        if path.startswith(prefix + "/"):
+            request.scope["path"] = path[len(prefix):] or "/"
+            break
+    return await call_next(request)
 from web_app import health as _health
 from web_app import get_stories as _stories
 from web_app import agent_status as _agent_status
