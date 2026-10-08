@@ -48,15 +48,7 @@ jobs:
           for f in build/the-envelope/EP*_THE_ENVELOPE.mp4; do
             ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height -of csv=p=0 "$f" | grep -qx 'h264,720,1280'
             ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 "$f" | grep -qx 'aac'
-            python - "$f" <<'PY'
-import json, subprocess, sys
-p=sys.argv[1]
-probe=json.loads(subprocess.check_output(["ffprobe","-v","error","-show_format","-show_streams","-of","json",p]))
-d=float(probe["format"]["duration"])
-assert 59.8 <= d <= 60.2, (p,d)
-subprocess.run(["ffmpeg","-v","error","-i",p,"-f","null","-"],check=True)
-print("PASS",p,round(d,3))
-PY
+            python -c 'import json,subprocess,sys; p=sys.argv[1]; x=json.loads(subprocess.check_output(["ffprobe","-v","error","-show_format","-show_streams","-of","json",p])); d=float(x["format"]["duration"]); assert 59.8 <= d <= 60.2, (p,d); subprocess.run(["ffmpeg","-v","error","-i",p,"-f","null","-"],check=True); print("PASS",p,round(d,3))' "$f"
           done
 
       - name: Prepare public media site
