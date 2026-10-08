@@ -75,10 +75,29 @@ jobs:
           </html>
           HTML
 
-      - name: Setup GitHub Pages
-        uses: actions/configure-pages@v5
+      - name: Build Pages artifact
+        run: |
+          test -d _site
+          test "$(find _site/media -maxdepth 1 -type f -name 'EP*_THE_ENVELOPE.mp4' | wc -l)" -eq 30
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          enablement: true
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
