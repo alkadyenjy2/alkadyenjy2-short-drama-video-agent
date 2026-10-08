@@ -5,6 +5,7 @@
 import os
 import asyncio
 import signal
+from telegram.error import InvalidToken
 from dotenv import load_dotenv
 
 # Load .env if exists (dev), but env vars take precedence (prod)
@@ -18,6 +19,13 @@ import bot as bot_module
 
 def get_bot_token():
     return bot_module.get_bot_token()
+
+
+def telegram_startup_mode(error):
+    """Classify Telegram startup failures without hiding unrelated failures."""
+    if isinstance(error, InvalidToken):
+        return "disabled_invalid_token"
+    return "fatal"
 
 async def main():
     print("=== Video Agent v1.2 Deployment Foundation Starting ===")
@@ -46,17 +54,21 @@ async def main():
     
     # 3. Telegram bot - fail-fast on BOT_TOKEN missing (already in get_bot_token)
     print("Initializing Telegram bot...")
+    application = None
+    telegram_enabled = True
     try:
         application = bot_module.build_application()
-        # Inject repository into bot context if needed (for future)
-        # For v1.2, bot.py still uses in-memory but we will integrate
         print("Telegram bot initialized - BOT_TOKEN present")
     except RuntimeError as e:
         print(f"FATAL: {e}")
         raise
     except Exception as e:
-        print(f"FATAL: Bot init failed: {e}")
-        raise
+        if telegram_startup_mode(e) == "disabled_invalid_token":
+            telegram_enabled = False
+            print("WARNING: Telegram BOT_TOKEN rejected by Telegram; continuing in degraded web/health mode.")
+        else:
+            print(f"FATAL: Bot init failed: {e}")
+            raise
     
     # 4. Start Telegram polling and keep the service alive.
     stop_event = asyncio.Event()
@@ -68,15 +80,24 @@ async def main():
     signal.signal(signal.SIGINT, handle_shutdown)
     signal.signal(signal.SIGTERM, handle_shutdown)
 
-    print("Initializing Telegram polling...")
-    await application.initialize()
-    await application.start()
-    if application.updater is None:
-        raise RuntimeError("Telegram updater is unavailable; cannot start polling")
-    await application.updater.start_polling()
+    if telegram_enabled and application is not None:
+        print("Initializing Telegram polling...")
+        try:
+            await application.initialize()
+            await application.start()
+            if application.updater is None:
+                raise RuntimeError("Telegram updater is unavailable; cannot start polling")
+            await application.updater.start_polling()
+            print("Telegram polling active")
+        except InvalidToken:
+            telegram_enabled = False
+            print("WARNING: Telegram BOT_TOKEN rejected during startup; continuing in degraded web/health mode.")
+        except Exception as e:
+            print(f"FATAL: Telegram startup failed: {e}")
+            raise
     print("=== Video Agent v1.2 Ready ===")
     print("Health: GET /health")
-    print("Bot: Telegram polling active")
+    print(f"Bot: {'Telegram polling active' if telegram_enabled else 'disabled (invalid token)'}")
     print("Persistence: SQLite local - migration path to Postgres in DEPLOYMENT.md")
     print("Publisher: Evidence Gate enforced")
 
