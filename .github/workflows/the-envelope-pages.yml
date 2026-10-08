@@ -57,23 +57,23 @@ jobs:
           mkdir -p _site/media
           cp build/the-envelope/EP*_THE_ENVELOPE.mp4 _site/media/
           cat > _site/index.html <<'HTML'
-<!doctype html>
-<html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>THE ENVELOPE — Episodes</title></head>
-<body>
-<h1>THE ENVELOPE</h1>
-<p>30-episode deterministic production fallback. Every listed MP4 passed H.264/AAC, 720x1280, ~60s and full FFmpeg decode verification in GitHub Actions.</p>
-<ol>
-HTML
+          <!doctype html>
+          <html lang="en">
+          <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>THE ENVELOPE — Episodes</title></head>
+          <body>
+          <h1>THE ENVELOPE</h1>
+          <p>30-episode deterministic production fallback. Every listed MP4 passed H.264/AAC, 720x1280, ~60s and full FFmpeg decode verification in GitHub Actions.</p>
+          <ol>
+          HTML
           for f in _site/media/EP*_THE_ENVELOPE.mp4; do
             n=$(basename "$f" .mp4)
             echo "<li><a href=\"media/$(basename "$f")\">$(basename "$f" .mp4)</a></li>" >> _site/index.html
           done
           cat >> _site/index.html <<'HTML'
-</ol>
-</body>
-</html>
-HTML
+          </ol>
+          </body>
+          </html>
+          HTML
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
