@@ -14,25 +14,34 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - name: Install FFmpeg
-        uses: FedericoCarbonara/ffmpeg-installer@v6
-      - name: Verify production scripts
+      - name: Install FFmpeg and test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg espeak-ng
+          python -m pip install Pillow
+
+      - name: Verify canonical rendering scripts
         shell: bash
         run: |
           set -euo pipefail
-          test -f the_envelope_visual.py
-          test -f audit_full.py
-          test -f visual_pipeline_free.py
-          python -m py_compile the_envelope_visual.py audit_full.py visual_pipeline_free.py
-          echo "PRODUCTION_SCRIPTS=PASS"
+          test -f rendering/the_envelope_visual.py
+          test -f rendering/the_envelope_fallback.py
+          test -f rendering/test_the_envelope_fallback.py
+          test -f rendering/verify_batch.py
+          python -m py_compile rendering/the_envelope_visual.py rendering/the_envelope_fallback.py rendering/test_the_envelope_fallback.py rendering/verify_batch.py
+          echo "CANONICAL_RENDER_SCRIPTS=PASS"
+
+      - name: Run focused renderer tests
+        run: python -m unittest rendering/test_the_envelope_fallback.py -v
+
       - name: Audit repository media inventory
         shell: bash
         run: |
           set -euo pipefail
-          count=$(find . -type f \( -iname '*.mp4' -o -iname '*.mov' -o -iname '*.m4v' \) | wc -l)
-          echo "REPO_MEDIA_COUNT=$count"
+          count=$(find public/media -type f \( -iname '*.mp4' -o -iname '*.mov' -o -iname '*.m4v' \) 2>/dev/null | wc -l)
+          echo "PUBLIC_MEDIA_COUNT=$count"
           if [ "$count" -gt 0 ]; then
-            find . -type f \( -iname '*.mp4' -o -iname '*.mov' -o -iname '*.m4v' \) -print
+            find public/media -type f \( -iname '*.mp4' -o -iname '*.mov' -o -iname '*.m4v' \) -print
           else
-            echo "NO_COMMITTED_MEDIA=TRUE"
+            echo "NO_COMMITTED_PUBLIC_MEDIA=TRUE"
           fi
