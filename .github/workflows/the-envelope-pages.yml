@@ -1,0 +1,107 @@
+name: THE ENVELOPE — Free 30-Episode Render + Public Media
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rendering/the_envelope_fallback.py'
+      - 'rendering/test_the_envelope_fallback.py'
+      - '.github/workflows/the-envelope-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: the-envelope-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install free render dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg espeak-ng
+          python -m pip install --upgrade pip
+          python -m pip install Pillow
+
+      - name: RED — focused renderer tests
+        run: python -m unittest rendering/test_the_envelope_fallback.py -v
+
+      - name: GREEN — render all 30 episodes
+        run: python rendering/the_envelope_fallback.py
+
+      - name: Evidence gate — verify every MP4
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=$(find build/the-envelope -maxdepth 1 -type f -name 'EP*_THE_ENVELOPE.mp4' | wc -l)
+          test "$count" -eq 30
+          for f in build/the-envelope/EP*_THE_ENVELOPE.mp4; do
+            ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height -of csv=p=0 "$f" | grep -qx 'h264,720,1280'
+            ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 "$f" | grep -qx 'aac'
+            python - "$f" <<'PY'
+import json, subprocess, sys
+p=sys.argv[1]
+probe=json.loads(subprocess.check_output(["ffprobe","-v","error","-show_format","-show_streams","-of","json",p]))
+d=float(probe["format"]["duration"])
+assert 59.8 <= d <= 60.2, (p,d)
+subprocess.run(["ffmpeg","-v","error","-i",p,"-f","null","-"],check=True)
+print("PASS",p,round(d,3))
+PY
+          done
+
+      - name: Prepare public media site
+        run: |
+          rm -rf _site
+          mkdir -p _site/media
+          cp build/the-envelope/EP*_THE_ENVELOPE.mp4 _site/media/
+          cat > _site/index.html <<'HTML'
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>THE ENVELOPE — Episodes</title></head>
+<body>
+<h1>THE ENVELOPE</h1>
+<p>30-episode deterministic production fallback. Every listed MP4 passed H.264/AAC, 720x1280, ~60s and full FFmpeg decode verification in GitHub Actions.</p>
+<ol>
+HTML
+          for f in _site/media/EP*_THE_ENVELOPE.mp4; do
+            n=$(basename "$f" .mp4)
+            printf '<li><a href="media/%s">%s</a></li>
+' "$(basename "$f")" "$n" >> _site/index.html
+          done
+          cat >> _site/index.html <<'HTML'
+</ol>
+</body>
+</html>
+HTML
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
