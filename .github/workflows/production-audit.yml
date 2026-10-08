@@ -1,0 +1,38 @@
+name: Free Media & Production Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  production-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Install FFmpeg
+        uses: FedericoCarbonara/ffmpeg-installer@v6
+      - name: Verify production scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f the_envelope_visual.py
+          test -f audit_full.py
+          test -f visual_pipeline_free.py
+          python -m py_compile the_envelope_visual.py audit_full.py visual_pipeline_free.py
+          echo "PRODUCTION_SCRIPTS=PASS"
+      - name: Audit repository media inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=$(find . -type f \( -iname '*.mp4' -o -iname '*.mov' -o -iname '*.m4v' \) | wc -l)
+          echo "REPO_MEDIA_COUNT=$count"
+          if [ "$count" -gt 0 ]; then
+            find . -type f \( -iname '*.mp4' -o -iname '*.mov' -o -iname '*.m4v' \) -print
+          else
+            echo "NO_COMMITTED_MEDIA=TRUE"
+          fi
