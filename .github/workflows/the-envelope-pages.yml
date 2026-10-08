@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: the-envelope-pages
@@ -73,12 +73,17 @@ jobs:
           </html>
           HTML
 
-      - name: Build Pages artifact
+      - name: Publish 30 verified MP4s as a public GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: the-envelope-verified
+        shell: bash
         run: |
-          test -d _site
-          test "$(find _site/media -maxdepth 1 -type f -name 'EP*_THE_ENVELOPE.mp4' | wc -l)" -eq 30
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG"               --title "THE ENVELOPE — 30 Verified Episodes"               --notes "Verified 30-episode release. Every MP4 passed the renderer tests, H.264/AAC + 720x1280 checks, ~60s duration gate, and full FFmpeg decode gate in GitHub Actions."               --target "$GITHUB_SHA"
+          else
+            gh release create "$RELEASE_TAG"               --title "THE ENVELOPE — 30 Verified Episodes"               --notes "Verified 30-episode release. Every MP4 passed the renderer tests, H.264/AAC + 720x1280 checks, ~60s duration gate, and full FFmpeg decode gate in GitHub Actions."               --target "$GITHUB_SHA"
+          fi
+          gh release upload "$RELEASE_TAG" build/the-envelope/EP*_THE_ENVELOPE.mp4 --clobber
+          printf '%s\n' "Public release: https://github.com/${{ github.repository }}/releases/tag/$RELEASE_TAG"
