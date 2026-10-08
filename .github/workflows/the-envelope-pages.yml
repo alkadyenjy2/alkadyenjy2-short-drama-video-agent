@@ -67,8 +67,7 @@ jobs:
 HTML
           for f in _site/media/EP*_THE_ENVELOPE.mp4; do
             n=$(basename "$f" .mp4)
-            printf '<li><a href="media/%s">%s</a></li>
-' "$(basename "$f")" "$n" >> _site/index.html
+            echo "<li><a href=\"media/$(basename "$f")\">$(basename "$f" .mp4)</a></li>" >> _site/index.html
           done
           cat >> _site/index.html <<'HTML'
 </ol>
