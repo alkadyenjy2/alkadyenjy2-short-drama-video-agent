@@ -103,6 +103,23 @@ def start_health_server(repository_getter, host="0.0.0.0", port=8000):
                         "error": "hidden"  # Do not expose internal stack traces
                     }
                     self.wfile.write(json.dumps(response).encode())
+            elif self.path == "/videos":
+                try:
+                    repo = repository_getter()
+                    videos = repo.list_video_versions() if repo else None
+                    if videos is None:
+                        raise RuntimeError("repository unavailable")
+                    self.send_response(200)
+                    self.send_header("Content-type", "application/json")
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"videos": videos, "storage": "persistent"}).encode())
+                except Exception:
+                    self.send_response(503)
+                    self.send_header("Content-type", "application/json")
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "video inventory unavailable"}).encode())
             else:
                 self.send_response(404)
                 self.end_headers()
