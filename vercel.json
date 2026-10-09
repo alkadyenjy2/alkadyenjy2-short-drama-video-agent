@@ -11,6 +11,10 @@
       "destination": "/api/index.py?__route=/videos"
     },
     {
+      "source": "/release-assets",
+      "destination": "https://short-drama-video-agen-production.up.railway.app/release-assets"
+    },
+    {
       "source": "/(.*)",
       "destination": "/api/index.py?__route=/$1"
     }
