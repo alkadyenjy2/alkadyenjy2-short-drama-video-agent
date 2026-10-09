@@ -47,6 +47,15 @@ class VideoInventoryTests(unittest.TestCase):
         self.assertEqual(result["videos"], versions)
         self.assertTrue(repo.initialized)
 
+    def test_release_asset_catalog_lists_only_real_release_assets(self):
+        result = web_app.list_release_assets()
+        self.assertEqual(result["count"], 30)
+        self.assertEqual(result["publication_status"], "release_asset_only")
+        self.assertFalse(result["platform_published"])
+        self.assertTrue(all(item["asset_url"].startswith("https://github.com/") for item in result["assets"]))
+        self.assertTrue(all(item["status"] == "release_asset_only" for item in result["assets"]))
+        self.assertTrue(all(item["publication_evidence"] is None for item in result["assets"]))
+
     def test_inventory_authentication_fails_closed(self):
         self.assertFalse(health.is_video_inventory_authorized("Bearer test-token", ""))
         self.assertFalse(health.is_video_inventory_authorized("Bearer wrong", "test-token"))
