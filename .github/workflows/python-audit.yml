@@ -1,5 +1,13 @@
 name: Python audit
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "web_app.py"
+      - "health.py"
+      - "persistence/**"
+      - "tests/**"
+      - ".github/workflows/python-audit.yml"
   push:
     branches: [main]
     paths:
@@ -24,12 +32,15 @@ on:
       - "video_generation_adapter.py"
       - "meta_ads_analytics.py"
       - "http_video_generation.py"
+      - "web_app.py"
+      - "health.py"
+      - "persistence/**"
       - ".github/workflows/python-audit.yml"
 jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -45,3 +56,4 @@ jobs:
       - run: python tests/test_learning_loop.py
       - run: python tests/test_meta_finance_media_boundaries.py
       - run: python tests/test_meta_ads_and_http_generation.py
+      - run: python tests/test_web_app_videos.py
