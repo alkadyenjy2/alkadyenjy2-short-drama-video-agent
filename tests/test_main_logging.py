@@ -2,7 +2,11 @@ import io
 import logging
 import unittest
 
-from main import TelegramTokenRedactionFilter, _redact_telegram_tokens
+from main import (
+    TelegramTokenRedactionFilter,
+    _redact_telegram_tokens,
+    configure_secret_redaction,
+)
 
 
 class TelegramTokenRedactionTests(unittest.TestCase):
@@ -35,6 +39,22 @@ class TelegramTokenRedactionTests(unittest.TestCase):
         output = stream.getvalue()
         self.assertNotIn(self.token, output)
         self.assertGreaterEqual(output.count(self.redacted), 2)
+
+    def test_configure_adds_redaction_to_httpx_and_suppresses_info_urls(self):
+        configure_secret_redaction()
+        logger = logging.getLogger("httpx")
+        self.assertTrue(
+            any(isinstance(item, TelegramTokenRedactionFilter) for item in logger.filters)
+        )
+        self.assertGreaterEqual(logger.level, logging.WARNING)
+
+        stream = io.StringIO()
+        handler = logging.StreamHandler(stream)
+        logger.addHandler(handler)
+        self.addCleanup(logger.removeHandler, handler)
+        logger.error("HTTP Request URL contained %s", self.token)
+        self.assertNotIn(self.token, stream.getvalue())
+        self.assertIn(self.redacted, stream.getvalue())
 
 
 if __name__ == "__main__":

@@ -55,19 +55,33 @@ class TelegramTokenRedactionFilter(logging.Filter):
 
 
 def configure_secret_redaction():
-    """Attach token redaction to existing handlers before third-party bot startup."""
+    """Redact secrets at logger and handler boundaries, including httpx request URLs."""
     redactor = TelegramTokenRedactionFilter()
     root = logging.getLogger()
     if not root.handlers:
         logging.basicConfig(level=logging.INFO)
-    for handler in root.handlers:
-        handler.addFilter(redactor)
+    if not any(isinstance(item, TelegramTokenRedactionFilter) for item in root.filters):
+        root.addFilter(redactor)
 
-    # Some libraries install their own handlers instead of propagating to root.
+    for handler in root.handlers:
+        if not any(isinstance(item, TelegramTokenRedactionFilter) for item in handler.filters):
+            handler.addFilter(redactor)
+
+    # Apply to loggers as well: libraries can create their own handlers after startup.
     for logger in logging.root.manager.loggerDict.values():
         if isinstance(logger, logging.Logger):
+            if not any(isinstance(item, TelegramTokenRedactionFilter) for item in logger.filters):
+                logger.addFilter(redactor)
             for handler in logger.handlers:
-                handler.addFilter(redactor)
+                if not any(isinstance(item, TelegramTokenRedactionFilter) for item in handler.filters):
+                    handler.addFilter(redactor)
+
+    # httpx includes complete request URLs in INFO messages; suppress those by default.
+    for name in ("httpx", "httpcore"):
+        logger = logging.getLogger(name)
+        if not any(isinstance(item, TelegramTokenRedactionFilter) for item in logger.filters):
+            logger.addFilter(redactor)
+        logger.setLevel(max(logger.level, logging.WARNING))
 
 
 def get_bot_token():
