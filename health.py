@@ -110,6 +110,35 @@ def start_health_server(repository_getter, host="0.0.0.0", port=8000):
                         "error": "hidden"  # Do not expose internal stack traces
                     }
                     self.wfile.write(json.dumps(response).encode())
+            elif self.path == "/release-assets":
+                # Public, read-only inventory of real files attached to the
+                # verified GitHub release. This is not proof of social-platform publication.
+                manifest_path = os.path.join(os.path.dirname(__file__), "evidence", "the-envelope-release-assets.json")
+                try:
+                    with open(manifest_path, "r", encoding="utf-8") as f:
+                        manifest = json.load(f)
+                    assets = manifest.get("assets") if isinstance(manifest, dict) else None
+                    if not isinstance(assets, list):
+                        raise ValueError("invalid release asset manifest")
+                    response = {
+                        "count": len(assets),
+                        "assets": assets,
+                        "release_url": manifest.get("release_url"),
+                        "publication_status": "release_asset_only",
+                        "platform_published": False,
+                    }
+                    body = json.dumps(response).encode()
+                    self.send_response(200)
+                    self.send_header("Content-type", "application/json")
+                    self.send_header("Cache-Control", "no-store")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+                except (OSError, ValueError):
+                    self.send_response(503)
+                    self.send_header("Content-type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "release asset catalog unavailable"}).encode())
             elif self.path == "/videos":
                 expected_token = os.getenv("VIDEO_API_TOKEN", "").strip()
                 authorization = self.headers.get("Authorization", "")
