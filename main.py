@@ -5,6 +5,8 @@
 import os
 import asyncio
 import signal
+import logging
+import re
 from telegram.error import InvalidToken
 from dotenv import load_dotenv
 
@@ -17,6 +19,57 @@ from health import start_health_server
 # Import bot components from bot.py v1.1 (we reuse behavior)
 import bot as bot_module
 
+
+_TELEGRAM_TOKEN_PATTERN = re.compile(r"\b\d{6,12}:[A-Za-z0-9_-]{20,}\b")
+_REDACTED_TOKEN = "[REDACTED_TELEGRAM_BOT_TOKEN]"
+
+
+def _redact_telegram_tokens(value):
+    """Redact Telegram bot tokens from any log message or rendered traceback."""
+    if not isinstance(value, str):
+        return value
+    return _TELEGRAM_TOKEN_PATTERN.sub(_REDACTED_TOKEN, value)
+
+
+class TelegramTokenRedactionFilter(logging.Filter):
+    """Prevent library exceptions from writing bot tokens into platform logs."""
+
+    def filter(self, record):
+        try:
+            message = record.getMessage()
+        except Exception:
+            message = str(record.msg)
+        record.msg = _redact_telegram_tokens(message)
+        record.args = ()
+
+        if record.exc_info:
+            try:
+                rendered_exception = logging.Formatter().formatException(record.exc_info)
+            except Exception:
+                rendered_exception = "[exception details suppressed]"
+            record.exc_text = _redact_telegram_tokens(rendered_exception)
+            record.exc_info = None
+        elif record.exc_text:
+            record.exc_text = _redact_telegram_tokens(record.exc_text)
+        return True
+
+
+def configure_secret_redaction():
+    """Attach token redaction to existing handlers before third-party bot startup."""
+    redactor = TelegramTokenRedactionFilter()
+    root = logging.getLogger()
+    if not root.handlers:
+        logging.basicConfig(level=logging.INFO)
+    for handler in root.handlers:
+        handler.addFilter(redactor)
+
+    # Some libraries install their own handlers instead of propagating to root.
+    for logger in logging.root.manager.loggerDict.values():
+        if isinstance(logger, logging.Logger):
+            for handler in logger.handlers:
+                handler.addFilter(redactor)
+
+
 def get_bot_token():
     return bot_module.get_bot_token()
 
@@ -27,9 +80,11 @@ def telegram_startup_mode(error):
         return "disabled_invalid_token"
     return "fatal"
 
+
 async def main():
+    configure_secret_redaction()
     print("=== Video Agent v1.2 Deployment Foundation Starting ===")
-    
+
     # 1. Persistence init
     db_path = os.getenv("DATABASE_PATH", "./data/video_agent.db")
     print(f"Initializing persistence: {db_path}")
@@ -44,14 +99,14 @@ async def main():
         print(f"FATAL: Persistence init failed: {e}")
         # Health endpoint will report 503
         raise
-    
+
     # 2. Health server - non-blocking
     host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "8000"))
     print(f"Starting health server on {host}:{port}")
     health_server, health_thread = start_health_server(lambda: repo, host=host, port=port)
     print(f"Health endpoint: http://{host}:{port}/health")
-    
+
     # 3. Telegram bot - fail-fast on BOT_TOKEN missing (already in get_bot_token)
     print("Initializing Telegram bot...")
     application = None
@@ -69,7 +124,7 @@ async def main():
         else:
             print(f"FATAL: Bot init failed: {e}")
             raise
-    
+
     # 4. Start Telegram polling and keep the service alive.
     stop_event = asyncio.Event()
 
@@ -104,15 +159,18 @@ async def main():
     try:
         await stop_event.wait()
     finally:
-        if application.updater and application.updater.running:
+        if application and application.updater and application.updater.running:
             await application.updater.stop()
-        await application.stop()
-        await application.shutdown()
+        if application and application.running:
+            await application.stop()
+        if application and application.initialized:
+            await application.shutdown()
         health_server.shutdown()
         if hasattr(repo, "close"):
             repo.close()
 
     return {"status": "STOPPED"}
+
 
 if __name__ == "__main__":
     asyncio.run(main())
