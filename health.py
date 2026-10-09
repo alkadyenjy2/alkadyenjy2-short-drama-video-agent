@@ -3,8 +3,15 @@
 
 import os
 import json
+import hmac
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
+
+
+def is_video_inventory_authorized(authorization: str, expected_token: str) -> bool:
+    if not expected_token:
+        return False
+    return hmac.compare_digest(authorization or "", f"Bearer {expected_token}")
 
 class HealthHandler(BaseHTTPRequestHandler):
     def __init__(self, repository_getter, *args, **kwargs):
@@ -104,6 +111,15 @@ def start_health_server(repository_getter, host="0.0.0.0", port=8000):
                     }
                     self.wfile.write(json.dumps(response).encode())
             elif self.path == "/videos":
+                expected_token = os.getenv("VIDEO_API_TOKEN", "").strip()
+                authorization = self.headers.get("Authorization", "")
+                if not is_video_inventory_authorized(authorization, expected_token):
+                    self.send_response(401)
+                    self.send_header("Content-type", "application/json")
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "unauthorized"}).encode())
+                    return
                 try:
                     repo = repository_getter()
                     videos = repo.list_video_versions() if repo else None
