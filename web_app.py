@@ -107,8 +107,15 @@ def list_videos():
     # configured but unavailable.
     api_base = os.getenv("VIDEO_AGENT_API_URL", "").strip().rstrip("/")
     if api_base:
+        api_token = os.getenv("VIDEO_API_TOKEN", "").strip()
+        if not api_token:
+            raise HTTPException(status_code=503, detail="Persistent video inventory is not configured")
         try:
-            response = requests.get(f"{api_base}/videos", timeout=8)
+            response = requests.get(
+                f"{api_base}/videos",
+                headers={"Authorization": f"Bearer {api_token}"},
+                timeout=8,
+            )
             if response.status_code != 200:
                 raise HTTPException(status_code=503, detail="Persistent video inventory is unavailable")
             payload = response.json()
