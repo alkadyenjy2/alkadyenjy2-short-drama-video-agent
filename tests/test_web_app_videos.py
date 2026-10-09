@@ -56,6 +56,24 @@ class VideoInventoryTests(unittest.TestCase):
         self.assertTrue(all(item["status"] == "release_asset_only" for item in result["assets"]))
         self.assertTrue(all(item["publication_evidence"] is None for item in result["assets"]))
 
+    def test_railway_release_asset_endpoint_serves_real_assets_and_preserves_gate(self):
+        server, thread = health.start_health_server(lambda: None, host="127.0.0.1", port=0)
+        try:
+            response = web_app.requests.get(
+                f"http://127.0.0.1:{server.server_port}/release-assets",
+                timeout=2,
+            )
+            self.assertEqual(response.status_code, 200)
+            payload = response.json()
+            self.assertEqual(payload["count"], 30)
+            self.assertEqual(payload["publication_status"], "release_asset_only")
+            self.assertFalse(payload["platform_published"])
+            self.assertTrue(all(item["asset_url"].startswith("https://github.com/") for item in payload["assets"]))
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
     def test_inventory_authentication_fails_closed(self):
         self.assertFalse(health.is_video_inventory_authorized("Bearer test-token", ""))
         self.assertFalse(health.is_video_inventory_authorized("Bearer wrong", "test-token"))
