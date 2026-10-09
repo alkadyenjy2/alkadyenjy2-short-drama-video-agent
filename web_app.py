@@ -100,6 +100,32 @@ def get_stories():
         stories = json.load(f)
     return {"count": len(stories), "stories": stories}
 
+@app.get("/release-assets")
+def list_release_assets():
+    """Return real MP4 assets attached to the verified GitHub release.
+
+    Release availability is not platform-publication evidence. Each item stays
+    marked release_asset_only until a platform receipt/permalink is recorded.
+    """
+    import json
+    manifest_path = os.path.join(os.path.dirname(__file__), "evidence", "the-envelope-release-assets.json")
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            manifest = json.load(f)
+    except (OSError, ValueError) as exc:
+        raise HTTPException(status_code=503, detail="Release asset catalog is unavailable") from exc
+    assets = manifest.get("assets") if isinstance(manifest, dict) else None
+    if not isinstance(assets, list):
+        raise HTTPException(status_code=502, detail="Release asset catalog is invalid")
+    return {
+        "count": len(assets),
+        "assets": assets,
+        "release_url": manifest.get("release_url"),
+        "publication_status": "release_asset_only",
+        "platform_published": False,
+    }
+
+
 @app.get("/videos")
 def list_videos():
     # Production uses the Railway service's mounted persistent volume. Do not
