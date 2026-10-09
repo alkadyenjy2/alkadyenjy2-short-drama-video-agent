@@ -6,6 +6,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+import requests
 
 from persistence.repository import get_repository
 from visual_factory import get_agent_status, parse_story_to_beats
@@ -66,8 +67,13 @@ button:hover { background:#E50914; color:#fff; }
 </div>
 
 <script>
-fetch('/videos').then(r=>r.json()).then(data=>{
-  document.getElementById('videos').innerHTML = data.videos.map(v=>`<p>🎬 ${v.video_id} - ${v.current_version} - ${v.status}</p>`).join('') || 'لا يوجد فيديوهات بعد';
+fetch('/videos').then(r=>{
+  if (!r.ok) throw new Error('inventory unavailable');
+  return r.json();
+}).then(data=>{
+  document.getElementById('videos').innerHTML = data.videos.map(v=>`<p>🎬 ${v.video_id} - ${v.current_version} - ${v.story_id || '—'}</p>`).join('') || 'لا يوجد فيديوهات مسجلة بعد';
+}).catch(()=>{
+  document.getElementById('videos').textContent = 'تعذر تحميل سجل الفيديوهات الدائم؛ حاول لاحقًا.';
 });
 </script>
 </body>
@@ -96,13 +102,40 @@ def get_stories():
 
 @app.get("/videos")
 def list_videos():
+    # Production uses the Railway service's mounted persistent volume. Do not
+    # silently fall back to Vercel's ephemeral filesystem when that service is
+    # configured but unavailable.
+    api_base = os.getenv("VIDEO_AGENT_API_URL", "").strip().rstrip("/")
+    if api_base:
+        api_token = os.getenv("VIDEO_API_TOKEN", "").strip()
+        if not api_token:
+            raise HTTPException(status_code=503, detail="Persistent video inventory is not configured")
+        try:
+            response = requests.get(
+                f"{api_base}/videos",
+                headers={"Authorization": f"Bearer {api_token}"},
+                timeout=8,
+            )
+            if response.status_code != 200:
+                raise HTTPException(status_code=503, detail="Persistent video inventory is unavailable")
+            payload = response.json()
+            videos = payload.get("videos") if isinstance(payload, dict) else None
+            if not isinstance(videos, list):
+                raise HTTPException(status_code=502, detail="Persistent video inventory returned an invalid response")
+            return {"videos": videos, "storage": "persistent"}
+        except requests.RequestException as exc:
+            raise HTTPException(status_code=503, detail="Persistent video inventory is unavailable") from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=502, detail="Persistent video inventory returned invalid JSON") from exc
+
+    # Local/dev fallback only. Schema creation is idempotent; production should
+    # configure VIDEO_AGENT_API_URL to avoid Vercel's ephemeral filesystem.
     try:
         repo = get_repository()
-        # Try to list from DB
-        vids = repo.list_videos() if hasattr(repo, 'list_videos') else []
-        return {"videos": vids}
-    except Exception as e:
-        return {"videos": [], "note": str(e)}
+        repo.init_schema()
+        return {"videos": repo.list_video_versions(), "storage": "local"}
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Video inventory is unavailable") from exc
 
 @app.post("/generate")
 def generate_video(req: GenerateRequest):
