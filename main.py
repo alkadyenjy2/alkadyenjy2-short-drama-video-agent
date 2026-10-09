@@ -163,7 +163,7 @@ async def main():
             await application.updater.stop()
         if application and application.running:
             await application.stop()
-        if application:
+        if application and application.initialized:
             await application.shutdown()
         health_server.shutdown()
         if hasattr(repo, "close"):
