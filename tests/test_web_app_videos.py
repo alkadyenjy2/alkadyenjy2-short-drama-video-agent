@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import health
 import web_app
 
 
@@ -46,6 +47,11 @@ class VideoInventoryTests(unittest.TestCase):
         self.assertEqual(result["videos"], versions)
         self.assertTrue(repo.initialized)
 
+    def test_inventory_authentication_fails_closed(self):
+        self.assertFalse(health.is_video_inventory_authorized("Bearer test-token", ""))
+        self.assertFalse(health.is_video_inventory_authorized("Bearer wrong", "test-token"))
+        self.assertTrue(health.is_video_inventory_authorized("Bearer test-token", "test-token"))
+
     def test_inventory_uses_configured_persistent_service(self):
         payload = {
             "videos": [
@@ -63,14 +69,19 @@ class VideoInventoryTests(unittest.TestCase):
         response.json.return_value = payload
         with patch.dict(
             os.environ,
-            {"VIDEO_AGENT_API_URL": "https://persistent-video-service.example"},
+            {
+                "VIDEO_AGENT_API_URL": "https://persistent-video-service.example",
+                "VIDEO_API_TOKEN": "test-token",
+            },
             clear=False,
         ), patch.object(web_app, "requests", create=True) as requests:
             requests.get.return_value = response
             result = web_app.list_videos()
         self.assertEqual(result["videos"], payload["videos"])
         requests.get.assert_called_once_with(
-            "https://persistent-video-service.example/videos", timeout=8
+            "https://persistent-video-service.example/videos",
+            headers={"Authorization": "Bearer test-token"},
+            timeout=8,
         )
 
 
