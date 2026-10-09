@@ -1,4 +1,6 @@
 import os, sys
+from urllib.parse import parse_qsl, urlencode
+
 from fastapi import Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
@@ -10,15 +12,33 @@ from web_app import app
 
 @app.middleware("http")
 async def normalize_vercel_path(request, call_next):
+    # Vercel rewrites the incoming URL to /api/index.py. Preserve the original
+    # route in __route so endpoints such as /videos do not become the dashboard.
     path = request.scope.get("path", "")
-    for prefix in ("/api/index.py", "/api/index", "/api"):
-        if path == prefix:
-            request.scope["path"] = "/"
-            break
-        if path.startswith(prefix + "/"):
-            request.scope["path"] = path[len(prefix):] or "/"
-            break
+    query_string = request.scope.get("query_string", b"")
+    try:
+        query_pairs = parse_qsl(query_string.decode("utf-8"), keep_blank_values=True)
+    except UnicodeDecodeError:
+        query_pairs = []
+    original_route = next((value for key, value in query_pairs if key == "__route"), None)
+
+    if path in ("/api/index.py", "/api/index") and original_route:
+        if original_route.startswith("/") and not original_route.startswith("//"):
+            path = original_route
+            request.scope["path"] = path
+            request.scope["raw_path"] = path.encode("utf-8")
+            query_pairs = [(key, value) for key, value in query_pairs if key != "__route"]
+            request.scope["query_string"] = urlencode(query_pairs).encode("utf-8")
+    else:
+        for prefix in ("/api/index.py", "/api/index", "/api"):
+            if path == prefix:
+                request.scope["path"] = "/"
+                break
+            if path.startswith(prefix + "/"):
+                request.scope["path"] = path[len(prefix):] or "/"
+                break
     return await call_next(request)
+
 from web_app import health as _health
 from web_app import get_stories as _stories
 from web_app import agent_status as _agent_status
