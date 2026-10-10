@@ -54,18 +54,38 @@ def verify_mp4(path: str) -> dict[str, Any]:
         size = int(fmt.get("size") or 0)
         has_video = any(s.get("codec_type") == "video" for s in streams)
         has_audio = any(s.get("codec_type") == "audio" for s in streams)
-        if "mp4" not in format_name or duration <= 0 or size <= 0 or not has_video:
+        if "mp4" not in format_name or duration <= 0 or size <= 0 or not has_video or not has_audio:
             return {
                 "status": "NOT_VERIFIED",
-                "reason": "ffprobe did not confirm a playable MP4 video artifact",
+                "reason": "ffprobe did not confirm a playable MP4 with both video and audio streams",
                 "format_name": format_name,
                 "duration": duration,
                 "size": size,
+                "video_verified": has_video,
+                "audio_verified": has_audio,
             }
     except (OSError, subprocess.CalledProcessError, ValueError, json.JSONDecodeError) as exc:
         return {"status": "NOT_VERIFIED", "reason": f"ffprobe validation failed: {type(exc).__name__}"}
 
-    digest = hashlib.sha256(p.read_bytes()).hexdigest()
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        return {"status": "NOT_VERIFIED", "reason": "ffmpeg unavailable; full media decode cannot be verified"}
+    try:
+        decode = subprocess.run(
+            [ffmpeg, "-v", "error", "-i", str(p), "-f", "null", "-"],
+            capture_output=True,
+            text=True,
+        )
+    except OSError as exc:
+        return {"status": "NOT_VERIFIED", "reason": f"ffmpeg decode failed: {type(exc).__name__}"}
+    if decode.returncode != 0:
+        return {"status": "NOT_VERIFIED", "reason": "full ffmpeg decode failed"}
+
+    digest_state = hashlib.sha256()
+    with p.open("rb") as artifact:
+        for chunk in iter(lambda: artifact.read(1024 * 1024), b""):
+            digest_state.update(chunk)
+    digest = digest_state.hexdigest()
     return {
         "status": "GENERATED",
         "bytes": p.stat().st_size,
