@@ -94,7 +94,10 @@ with tempfile.TemporaryDirectory() as d:
         args=["ffprobe"], returncode=0,
         stdout=json.dumps({
             "format": {"format_name": "mov,mp4,m4a,3gp,3g2,mj2", "duration": "1.0", "size": str(p.stat().st_size)},
-            "streams": [{"codec_type": "video", "codec_name": "h264", "width": 720, "height": 1280}],
+            "streams": [
+                {"codec_type": "video", "codec_name": "h264", "width": 720, "height": 1280},
+                {"codec_type": "audio", "codec_name": "aac", "sample_rate": "48000", "channels": 2},
+            ],
         }),
         stderr="",
     )
