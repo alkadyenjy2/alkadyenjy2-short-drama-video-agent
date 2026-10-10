@@ -176,7 +176,10 @@ async def main():
             raise
     print("=== Video Agent v1.2 Ready ===")
     print("Health: GET /health")
-    print(f"Bot: {'Telegram polling active' if telegram_enabled else f'disabled ({telegram_disabled_reason or "startup error"})'}")
+    if telegram_enabled:
+        print("Bot: Telegram polling active")
+    else:
+        print(f"Bot: disabled ({telegram_disabled_reason or 'startup error'})")
     print("Persistence: SQLite local - migration path to Postgres in DEPLOYMENT.md")
     print("Publisher: Evidence Gate enforced")
 
