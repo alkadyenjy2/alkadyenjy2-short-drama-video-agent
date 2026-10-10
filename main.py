@@ -90,6 +90,8 @@ def get_bot_token():
 
 def telegram_startup_mode(error):
     """Classify Telegram startup failures without hiding unrelated failures."""
+    if isinstance(error, RuntimeError) and "BOT_TOKEN is missing" in str(error):
+        return "disabled_missing_token"
     if isinstance(error, InvalidToken):
         return "disabled_invalid_token"
     return "fatal"
@@ -125,15 +127,22 @@ async def main():
     print("Initializing Telegram bot...")
     application = None
     telegram_enabled = True
+    telegram_disabled_reason = ""
     try:
         application = bot_module.build_application()
         print("Telegram bot initialized - BOT_TOKEN present")
     except RuntimeError as e:
-        print(f"FATAL: {e}")
-        raise
+        if telegram_startup_mode(e) == "disabled_missing_token":
+            telegram_enabled = False
+            telegram_disabled_reason = "missing token"
+            print("WARNING: BOT_TOKEN is not configured; Telegram is disabled while health/release APIs remain available.")
+        else:
+            print(f"FATAL: Bot init failed: {e}")
+            raise
     except Exception as e:
         if telegram_startup_mode(e) == "disabled_invalid_token":
             telegram_enabled = False
+            telegram_disabled_reason = "invalid token"
             print("WARNING: Telegram BOT_TOKEN rejected by Telegram; continuing in degraded web/health mode.")
         else:
             print(f"FATAL: Bot init failed: {e}")
@@ -160,13 +169,14 @@ async def main():
             print("Telegram polling active")
         except InvalidToken:
             telegram_enabled = False
+            telegram_disabled_reason = "invalid token"
             print("WARNING: Telegram BOT_TOKEN rejected during startup; continuing in degraded web/health mode.")
         except Exception as e:
             print(f"FATAL: Telegram startup failed: {e}")
             raise
     print("=== Video Agent v1.2 Ready ===")
     print("Health: GET /health")
-    print(f"Bot: {'Telegram polling active' if telegram_enabled else 'disabled (invalid token)'}")
+    print(f"Bot: {'Telegram polling active' if telegram_enabled else f'disabled ({telegram_disabled_reason or "startup error"})'}")
     print("Persistence: SQLite local - migration path to Postgres in DEPLOYMENT.md")
     print("Publisher: Evidence Gate enforced")
 
