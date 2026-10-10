@@ -1,7 +1,9 @@
+import json
 import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from youtube_agent import MAX_EPISODES, build_release_record, episode_id, publish_if_approved, verify_mp4, artifact_publish_classification
 
@@ -84,6 +86,26 @@ with tempfile.TemporaryDirectory() as d:
         assert evidence["video_verified"] is True
         assert evidence["duration_sec"] > 0
         assert len(evidence["sha256"]) == 64
+
+with tempfile.TemporaryDirectory() as d:
+    p = Path(d) / "corrupt-media.mp4"
+    p.write_bytes(b"placeholder bytes, not a valid decoded video")
+    probe_result = subprocess.CompletedProcess(
+        args=["ffprobe"], returncode=0,
+        stdout=json.dumps({
+            "format": {"format_name": "mov,mp4,m4a,3gp,3g2,mj2", "duration": "1.0", "size": str(p.stat().st_size)},
+            "streams": [{"codec_type": "video", "codec_name": "h264", "width": 720, "height": 1280}],
+        }),
+        stderr="",
+    )
+    decode_result = subprocess.CompletedProcess(
+        args=["ffmpeg"], returncode=1, stdout="", stderr="decode failure",
+    )
+    with patch("youtube_agent.shutil.which", side_effect=lambda name: f"/usr/bin/{name}" if name in ("ffprobe", "ffmpeg") else None):
+        with patch("youtube_agent.subprocess.run", side_effect=[probe_result, decode_result]):
+            rejected = verify_mp4(str(p))
+    assert rejected["status"] == "NOT_VERIFIED", rejected
+    assert "decode" in rejected["reason"].lower(), rejected
 
 print("YOUTUBE AGENT AUDIT: real-media validation + approval gate PASS")
 
