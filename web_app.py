@@ -82,8 +82,31 @@ fetch('/videos').then(r=>{
 
 @app.get("/health")
 def health():
-    repo = get_repository()
-    return {"status": "ok", "timestamp": datetime.utcnow().isoformat()+"Z", "db": repo.health_check(), "agent": get_agent_status(), "publisher": get_adapter_status()}
+    # Production persistence lives in the Railway service. Do not report the
+    # Vercel function's ephemeral SQLite file as a healthy production database.
+    api_base = os.getenv("VIDEO_AGENT_API_URL", "").strip().rstrip("/")
+    db_healthy = False
+    if api_base:
+        try:
+            response = requests.get(f"{api_base}/health", timeout=5)
+            if response.status_code == 200:
+                payload = response.json()
+                db_healthy = (
+                    isinstance(payload, dict)
+                    and payload.get("status") == "ok"
+                    and payload.get("persistence") == "ok"
+                )
+        except (requests.RequestException, ValueError):
+            db_healthy = False
+
+    return {
+        "status": "ok",
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "db": db_healthy,
+        "persistence_source": "railway" if api_base else "unconfigured",
+        "agent": get_agent_status(),
+        "publisher": get_adapter_status(),
+    }
 
 @app.get("/agent/status")
 def agent_status():
