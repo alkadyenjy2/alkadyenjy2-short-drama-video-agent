@@ -1,0 +1,39 @@
+name: Build deterministic Episode 1 fallback
+
+on:
+  push:
+    branches:
+      - feat/neon-persistent-video-api
+    paths:
+      - "rendering/episode1_animatic.py"
+      - ".github/workflows/build-episode1-fallback.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install free media tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg espeak-ng fonts-dejavu-core
+
+      - name: Render deterministic fallback and verify media
+        run: python rendering/episode1_animatic.py
+
+      - name: Upload verified MP4 and manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: short-drama-episode1-fallback-verified
+          path: |
+            build/THE_LAST_VOICEMAIL_Episode1_Fallback_Animatic.mp4
+            build/THE_LAST_VOICEMAIL_Episode1_Fallback_Animatic.manifest.json
+          if-no-files-found: error
+          retention-days: 14
