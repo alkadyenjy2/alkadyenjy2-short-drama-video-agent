@@ -31,6 +31,8 @@ class PersistentDashboardDatabaseTests(unittest.TestCase):
         self.assertTrue(result["db"])
         self.assertEqual(result["persistence_source"], "postgres")
         http_get.assert_not_called()
+        get_repository.assert_called_once_with(initialize_schema=False)
+        self.repo.init_schema.assert_not_called()
         self.repo.health_check.assert_called_once()
         self.repo.close.assert_called_once()
 
@@ -52,7 +54,8 @@ class PersistentDashboardDatabaseTests(unittest.TestCase):
         self.assertEqual(result["storage"], "postgres")
         self.assertEqual(result["videos"][0]["video_id"], "smoke-test")
         http_get.assert_not_called()
-        self.repo.init_schema.assert_called_once()
+        get_repository.assert_called_once_with(initialize_schema=False)
+        self.repo.init_schema.assert_not_called()
         self.repo.list_video_versions.assert_called_once()
         self.repo.close.assert_called_once()
 
