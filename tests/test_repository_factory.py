@@ -20,6 +20,14 @@ class RepositoryFactoryTests(unittest.TestCase):
         postgres.assert_called_once_with(database_url=database_url)
         self.assertIs(result, postgres.return_value)
 
+    def test_can_skip_postgres_schema_initialization_for_runtime(self):
+        database_url = "postgresql://test:secret@localhost/testdb"
+        with patch.dict(os.environ, {"DATABASE_URL": database_url}, clear=True):
+            with patch("persistence.postgres_repository.PostgresRepository") as postgres:
+                result = get_repository(initialize_schema=False)
+        postgres.assert_called_once_with(database_url=database_url, initialize_schema=False)
+        self.assertIs(result, postgres.return_value)
+
     def test_explicit_sqlite_path_overrides_database_url(self):
         with patch.dict(os.environ, {"DATABASE_URL": "postgresql://test:secret@localhost/testdb"}, clear=True):
             with patch("persistence.postgres_repository.PostgresRepository") as postgres:
