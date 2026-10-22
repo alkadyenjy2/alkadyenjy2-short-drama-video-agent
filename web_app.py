@@ -82,28 +82,46 @@ fetch('/videos').then(r=>{
 
 @app.get("/health")
 def health():
-    # Production persistence lives in the Railway service. Do not report the
-    # Vercel function's ephemeral SQLite file as a healthy production database.
+    # Prefer the configured durable PostgreSQL store. The former Railway URL
+    # may still exist in Vercel settings after that service has been removed.
+    database_url = os.getenv("DATABASE_URL", "").strip()
     api_base = os.getenv("VIDEO_AGENT_API_URL", "").strip().rstrip("/")
     db_healthy = False
-    if api_base:
+    if database_url:
+        repo = None
         try:
-            response = requests.get(f"{api_base}/health", timeout=5)
-            if response.status_code == 200:
-                payload = response.json()
-                db_healthy = (
-                    isinstance(payload, dict)
-                    and payload.get("status") == "ok"
-                    and payload.get("persistence") == "ok"
-                )
-        except (requests.RequestException, ValueError):
+            repo = get_repository()
+            repo.init_schema()
+            db_healthy = bool(repo.health_check())
+        except Exception:
             db_healthy = False
+        finally:
+            if repo is not None:
+                try:
+                    repo.close()
+                except Exception:
+                    pass
+        persistence_source = "postgres"
+    else:
+        if api_base:
+            try:
+                response = requests.get(f"{api_base}/health", timeout=5)
+                if response.status_code == 200:
+                    payload = response.json()
+                    db_healthy = (
+                        isinstance(payload, dict)
+                        and payload.get("status") == "ok"
+                        and payload.get("persistence") == "ok"
+                    )
+            except (requests.RequestException, ValueError):
+                db_healthy = False
+        persistence_source = "railway" if api_base else "unconfigured"
 
     return {
         "status": "ok",
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "db": db_healthy,
-        "persistence_source": "railway" if api_base else "unconfigured",
+        "persistence_source": persistence_source,
         "agent": get_agent_status(),
         "publisher": get_adapter_status(),
     }
@@ -151,9 +169,26 @@ def list_release_assets():
 
 @app.get("/videos")
 def list_videos():
-    # Production uses the Railway service's mounted persistent volume. Do not
-    # silently fall back to Vercel's ephemeral filesystem when that service is
-    # configured but unavailable.
+    # Prefer durable PostgreSQL when configured; never silently fall back to
+    # Vercel's ephemeral SQLite file when DATABASE_URL is present.
+    database_url = os.getenv("DATABASE_URL", "").strip()
+    if database_url:
+        repo = None
+        try:
+            repo = get_repository()
+            repo.init_schema()
+            return {"videos": repo.list_video_versions(), "storage": "postgres"}
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="Persistent video inventory is unavailable") from exc
+        finally:
+            if repo is not None:
+                try:
+                    repo.close()
+                except Exception:
+                    pass
+
+    # Legacy persistent Railway API remains available as a fallback for existing
+    # deployments that have not yet been migrated to DATABASE_URL.
     api_base = os.getenv("VIDEO_AGENT_API_URL", "").strip().rstrip("/")
     if api_base:
         api_token = os.getenv("VIDEO_API_TOKEN", "").strip()
@@ -178,13 +213,19 @@ def list_videos():
             raise HTTPException(status_code=502, detail="Persistent video inventory returned invalid JSON") from exc
 
     # Local/dev fallback only. Schema creation is idempotent; production should
-    # configure VIDEO_AGENT_API_URL to avoid Vercel's ephemeral filesystem.
+    # configure DATABASE_URL or VIDEO_AGENT_API_URL.
     try:
         repo = get_repository()
         repo.init_schema()
         return {"videos": repo.list_video_versions(), "storage": "local"}
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Video inventory is unavailable") from exc
+    finally:
+        if "repo" in locals():
+            try:
+                repo.close()
+            except Exception:
+                pass
 
 @app.post("/generate")
 def generate_video(req: GenerateRequest):
