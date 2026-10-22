@@ -32,7 +32,7 @@ See STATUS.md for current state.
 
 
 ## Persistent API (Preview)
-- `GET /health` checks PostgreSQL connectivity and the required schema.
-- `GET /videos` and `GET /videos/{video_id}` require `Authorization: Bearer $VIDEO_API_TOKEN`.
-- `POST /videos` requires the same bearer token and verifies database readback after writing.
+- `GET /persistent/health` checks PostgreSQL connectivity and the required schema.
+- `GET /persistent/videos` and `GET /persistent/videos/{video_id}` require `Authorization: Bearer $VIDEO_API_TOKEN`.
+- `POST /persistent/videos` requires the same bearer token and verifies database readback after writing.
 - Configure `DATABASE_URL` and `VIDEO_API_TOKEN` only in the Vercel Preview environment for branch `feat/neon-persistent-video-api`; do not commit secrets or promote this preview to production before end-to-end verification.
