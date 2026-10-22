@@ -15,13 +15,14 @@ from .repository import PersistenceRepository
 
 
 class PostgresRepository(PersistenceRepository):
-    def __init__(self, database_url: Optional[str] = None):
+    def __init__(self, database_url: Optional[str] = None, initialize_schema: bool = True):
         self.database_url = (database_url or os.getenv("DATABASE_URL", "")).strip()
         if not self.database_url:
             raise ValueError("DATABASE_URL is required for PostgreSQL persistence")
         self._lock = threading.RLock()
         self._conn = psycopg.connect(self.database_url, row_factory=dict_row, autocommit=True)
-        self.init_schema()
+        if initialize_schema:
+            self.init_schema()
 
     def init_schema(self):
         statements = [
