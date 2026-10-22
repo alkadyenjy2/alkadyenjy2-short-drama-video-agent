@@ -28,3 +28,27 @@ if __name__ == "__main__":
     test_meta_ads_credentials_fail_closed()
     test_http_generation_credentials_fail_closed()
     print("META ADS + HTTP GENERATION AUDIT: 2 PASS")
+
+def test_http_generation_rejects_empty_script_before_network():
+    adapter = HTTPVideoGenerationAdapter(endpoint="https://provider.invalid/generate", api_key="test-key")
+    try:
+        adapter.generate("   ", {})
+    except ValueError as exc:
+        assert "script is required" in str(exc)
+    else:
+        raise AssertionError("empty scripts must fail before a provider request")
+
+
+def test_http_generation_rejects_unrecognized_provider_response():
+    from unittest.mock import Mock, patch
+
+    adapter = HTTPVideoGenerationAdapter(endpoint="https://provider.invalid/generate", api_key="test-key")
+    response = Mock(status_code=202)
+    response.json.return_value = {"status": "queued"}
+    with patch("http_video_generation.requests.post", return_value=response):
+        try:
+            adapter.generate("A phone rings in a dark room.", {"beats": []})
+        except Exception as exc:
+            assert "artifact_url" in str(exc) or "job_id" in str(exc)
+        else:
+            raise AssertionError("a response without an artifact or pollable job must not pass")
