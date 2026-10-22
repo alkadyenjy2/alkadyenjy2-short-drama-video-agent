@@ -29,3 +29,10 @@ python web_app.py  # marketing dashboard
 Platform fit is now generated from observed metrics, account access, and platform requirements in `platform_recommender.py`. No fixed ROI percentages are treated as facts.
 
 See STATUS.md for current state.
+
+
+## Persistent API (Preview)
+- `GET /health` checks PostgreSQL connectivity and the required schema.
+- `GET /videos` and `GET /videos/{video_id}` require `Authorization: Bearer $VIDEO_API_TOKEN`.
+- `POST /videos` requires the same bearer token and verifies database readback after writing.
+- Configure `DATABASE_URL` and `VIDEO_API_TOKEN` only in the Vercel Preview environment for branch `feat/neon-persistent-video-api`; do not commit secrets or promote this preview to production before end-to-end verification.
