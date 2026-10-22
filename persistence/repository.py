@@ -366,11 +366,11 @@ class SQLiteRepository(PersistenceRepository):
             return False
 
 # Factory - keep SQLite for local/dev, use PostgreSQL when explicitly configured.
-def get_repository(db_path: Optional[str] = None) -> PersistenceRepository:
+def get_repository(db_path: Optional[str] = None, initialize_schema: bool = True) -> PersistenceRepository:
     database_url = os.getenv("DATABASE_URL", "").strip()
     if not db_path and database_url.startswith(("postgres://", "postgresql://")):
         # Import lazily so local SQLite-only environments do not need a live DB connection.
         from persistence.postgres_repository import PostgresRepository
-        return PostgresRepository(database_url=database_url)
+        return PostgresRepository(database_url=database_url, initialize_schema=initialize_schema)
     path = db_path or os.getenv("DATABASE_PATH", "./data/video_agent.db")
     return SQLiteRepository(db_path=path)
