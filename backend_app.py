@@ -11,7 +11,7 @@ app = FastAPI(title="Short Drama Persistent API", version="1.0.0")
 
 def repository():
     try:
-        return PostgresRepository()
+        return PostgresRepository(initialize_schema=False)
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Persistent database unavailable") from exc
 
