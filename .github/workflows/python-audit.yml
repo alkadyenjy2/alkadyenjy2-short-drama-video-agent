@@ -61,3 +61,4 @@ jobs:
       - run: python tests/test_meta_ads_and_http_generation.py
       - run: python tests/test_web_app_videos.py
       - run: PYTHONPATH=. python tests/test_telegram_startup_mode.py
+      - run: PYTHONPATH=. python tests/test_repository_factory.py
