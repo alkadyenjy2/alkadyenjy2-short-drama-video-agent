@@ -64,3 +64,25 @@ jobs:
       - run: PYTHONPATH=. python tests/test_backend_app.py
       - run: PYTHONPATH=. python tests/test_telegram_startup_mode.py
       - run: PYTHONPATH=. python tests/test_repository_factory.py
+  render_free_fallback:
+    if: github.event_name == 'pull_request' && github.head_ref == 'build-free-episode1-fallback-run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Install free media tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg espeak-ng fonts-dejavu-core
+      - name: Render and verify playable fallback
+        run: python rendering/episode1_animatic.py
+      - name: Upload verified media
+        uses: actions/upload-artifact@v4
+        with:
+          name: short-drama-episode1-fallback-verified
+          path: |
+            build/THE_LAST_VOICEMAIL_Episode1_Fallback_Animatic.mp4
+            build/THE_LAST_VOICEMAIL_Episode1_Fallback_Animatic.manifest.json
+          if-no-files-found: error
+          retention-days: 14
+
