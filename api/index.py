@@ -9,6 +9,11 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 from web_app import app
+from backend_app import app as persistent_app
+
+# Expose the authenticated PostgreSQL-backed API through the existing Vercel app.
+# Register these routes before the catch-all dashboard route below.
+app.include_router(persistent_app.router)
 
 @app.middleware("http")
 async def normalize_vercel_path(request, call_next):
