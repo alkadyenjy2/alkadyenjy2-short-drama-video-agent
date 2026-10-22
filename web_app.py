@@ -90,8 +90,7 @@ def health():
     if database_url:
         repo = None
         try:
-            repo = get_repository()
-            repo.init_schema()
+            repo = get_repository(initialize_schema=False)
             db_healthy = bool(repo.health_check())
         except Exception:
             db_healthy = False
@@ -175,8 +174,7 @@ def list_videos():
     if database_url:
         repo = None
         try:
-            repo = get_repository()
-            repo.init_schema()
+            repo = get_repository(initialize_schema=False)
             return {"videos": repo.list_video_versions(), "storage": "postgres"}
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Persistent video inventory is unavailable") from exc
