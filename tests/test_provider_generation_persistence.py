@@ -1,9 +1,9 @@
 import os
 import sys
+import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
 from fastapi import HTTPException
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -11,85 +11,58 @@ import web_app
 from video_generation_adapter import VideoArtifact
 
 
-def _request():
-    return web_app.GenerateRequest(
-        story_id="the-last-voicemail-ep1",
-        user_id="provider-test-user",
-    )
+def request_body():
+    return web_app.GenerateRequest(story_id="the-last-voicemail-ep1", user_id="provider-test-user")
 
 
-def test_generate_stays_plan_only_when_provider_is_not_configured():
-    with patch.dict(os.environ, {"VIDEO_GENERATION_API_URL": "", "VIDEO_GENERATION_API_KEY": ""}, clear=False):
-        result = web_app.generate_video(_request(), authorization=None)
+class ProviderGenerationPersistenceTests(unittest.TestCase):
+    def test_plan_only_when_provider_is_not_configured(self):
+        with patch.dict(os.environ, {"VIDEO_GENERATION_API_URL": "", "VIDEO_GENERATION_API_KEY": ""}, clear=False):
+            result = web_app.generate_video(request_body(), authorization=None)
+        self.assertEqual(result["status"], "PLAN_ONLY")
+        self.assertEqual(result["generation_evidence"], "NOT_AVAILABLE")
+        self.assertNotIn("artifact_url", result)
 
-    assert result["status"] == "PLAN_ONLY"
-    assert result["generation_evidence"] == "NOT_AVAILABLE"
-    assert "artifact_url" not in result
-
-
-def test_configured_generation_requires_authenticated_request():
-    with patch.dict(
-        os.environ,
-        {
+    def test_configured_generation_requires_authenticated_request(self):
+        with patch.dict(os.environ, {
             "VIDEO_GENERATION_API_URL": "https://provider.example/generate",
             "VIDEO_GENERATION_API_KEY": "provider-secret",
             "VIDEO_API_TOKEN": "request-secret",
-        },
-        clear=False,
-    ):
-        with pytest.raises(HTTPException) as exc:
-            web_app.generate_video(_request(), authorization="Bearer wrong")
+        }, clear=False):
+            with self.assertRaises(HTTPException) as exc:
+                web_app.generate_video(request_body(), authorization="Bearer wrong")
+        self.assertEqual(exc.exception.status_code, 401)
 
-    assert exc.value.status_code == 401
-
-
-def test_provider_artifact_is_persisted_and_only_then_marked_generated():
-    artifact = VideoArtifact(
-        artifact_url="https://media.example/episode.mp4",
-        provider="generic_http",
-        duration_sec=8,
-        evidence_status="OBSERVED",
-    )
-    with patch.dict(
-        os.environ,
-        {
+    def test_provider_artifact_is_persisted_before_generated_status(self):
+        artifact = VideoArtifact("https://media.example/episode.mp4", "generic_http", 8, "OBSERVED")
+        with patch.dict(os.environ, {
             "VIDEO_GENERATION_API_URL": "https://provider.example/generate",
             "VIDEO_GENERATION_API_KEY": "provider-secret",
             "VIDEO_API_TOKEN": "request-secret",
-        },
-        clear=False,
-    ), patch("web_app.HTTPVideoGenerationAdapter") as adapter, patch(
-        "web_app.persist_generated_artifact",
-        return_value={"artifact_id": "artifact_test", "readback_verified": True},
-    ) as persist:
-        adapter.return_value.generate.return_value = artifact
-        result = web_app.generate_video(_request(), authorization="Bearer request-secret")
+        }, clear=False), patch("web_app.HTTPVideoGenerationAdapter") as adapter, patch(
+            "web_app.persist_generated_artifact",
+            return_value={"artifact_id": "artifact_test", "readback_verified": True},
+        ) as persist:
+            adapter.return_value.generate.return_value = artifact
+            result = web_app.generate_video(request_body(), authorization="Bearer request-secret")
+        self.assertEqual(result["status"], "GENERATED")
+        self.assertEqual(result["generation_evidence"], "PERSISTED_READBACK_VERIFIED")
+        self.assertEqual(result["artifact_url"], artifact.artifact_url)
+        self.assertEqual(result["artifact_id"], "artifact_test")
+        persist.assert_called_once()
 
-    assert result["status"] == "GENERATED"
-    assert result["generation_evidence"] == "PERSISTED_READBACK_VERIFIED"
-    assert result["artifact_url"] == artifact.artifact_url
-    assert result["artifact_id"] == "artifact_test"
-    persist.assert_called_once()
-
-
-def test_provider_artifact_without_https_url_is_not_accepted():
-    artifact = VideoArtifact(
-        artifact_url="http://media.example/episode.mp4",
-        provider="generic_http",
-        duration_sec=8,
-        evidence_status="OBSERVED",
-    )
-    with patch.dict(
-        os.environ,
-        {
+    def test_non_https_artifact_is_rejected(self):
+        artifact = VideoArtifact("http://media.example/episode.mp4", "generic_http", 8, "OBSERVED")
+        with patch.dict(os.environ, {
             "VIDEO_GENERATION_API_URL": "https://provider.example/generate",
             "VIDEO_GENERATION_API_KEY": "provider-secret",
             "VIDEO_API_TOKEN": "request-secret",
-        },
-        clear=False,
-    ), patch("web_app.HTTPVideoGenerationAdapter") as adapter:
-        adapter.return_value.generate.return_value = artifact
-        with pytest.raises(HTTPException) as exc:
-            web_app.generate_video(_request(), authorization="Bearer request-secret")
+        }, clear=False), patch("web_app.HTTPVideoGenerationAdapter") as adapter:
+            adapter.return_value.generate.return_value = artifact
+            with self.assertRaises(HTTPException) as exc:
+                web_app.generate_video(request_body(), authorization="Bearer request-secret")
+        self.assertEqual(exc.exception.status_code, 502)
 
-    assert exc.value.status_code == 502
+
+if __name__ == "__main__":
+    unittest.main()
