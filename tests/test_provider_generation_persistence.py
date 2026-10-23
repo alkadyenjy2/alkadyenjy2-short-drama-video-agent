@@ -8,6 +8,7 @@ from fastapi import HTTPException
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import web_app
+import generated_artifact_store
 from video_generation_adapter import VideoArtifact
 
 
@@ -99,6 +100,43 @@ class ProviderGenerationPersistenceTests(unittest.TestCase):
             with self.assertRaises(HTTPException) as exc:
                 web_app.generate_video(request_body(), authorization="Bearer request-secret")
         self.assertEqual(exc.exception.status_code, 502)
+
+    def test_artifact_persistence_never_runs_schema_ddl_in_request_path(self):
+        row = {
+            "artifact_id": "artifact_test",
+            "video_id": "video_test",
+            "story_id": "story_test",
+            "provider": "generic_http",
+            "artifact_url": "https://res.cloudinary.com/demo/video/authenticated/short-drama/test.mp4",
+            "duration_sec": 60,
+            "evidence_status": "OBSERVED",
+            "storage_provider": "cloudinary",
+            "storage_public_id": "short-drama/test",
+            "storage_asset_id": "asset_test",
+            "storage_bytes": 1234,
+        }
+        executed_sql = []
+        cursor = unittest.mock.MagicMock()
+        cursor.fetchone.return_value = row
+        cursor.execute.side_effect = lambda sql, params=None: executed_sql.append(sql)
+        connection = unittest.mock.MagicMock()
+        connection.cursor.return_value.__enter__.return_value = cursor
+        with patch.dict(os.environ, {"DATABASE_URL": "postgresql://test:test@localhost/test"}, clear=False), patch(
+            "generated_artifact_store.psycopg.connect", return_value=connection
+        ):
+            generated_artifact_store.persist_generated_artifact(
+                video_id="video_test",
+                story_id="story_test",
+                provider="generic_http",
+                artifact_url=row["artifact_url"],
+                duration_sec=60,
+                evidence_status="OBSERVED",
+                storage_provider="cloudinary",
+                storage_public_id="short-drama/test",
+                storage_asset_id="asset_test",
+                storage_bytes=1234,
+            )
+        self.assertFalse(any("CREATE TABLE" in sql.upper() or "ALTER TABLE" in sql.upper() for sql in executed_sql))
 
 
 if __name__ == "__main__":
