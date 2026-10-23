@@ -45,6 +45,7 @@ class CloudinaryStorageTests(unittest.TestCase):
         upload.assert_called_once()
         self.assertEqual(upload.call_args.args[0], "https://provider.example/temporary/episode.mp4?token=temporary")
         self.assertEqual(upload.call_args.kwargs["resource_type"], "video")
+        self.assertEqual(upload.call_args.kwargs["type"], "authenticated")
         self.assertEqual(upload.call_args.kwargs["overwrite"], False)
 
     def test_incomplete_cloudinary_response_is_rejected(self):
