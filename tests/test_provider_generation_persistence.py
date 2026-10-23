@@ -103,7 +103,7 @@ class ProviderGenerationPersistenceTests(unittest.TestCase):
 
     def test_artifact_persistence_avoids_request_time_ddl_and_verifies_after_commit(self):
         row = {
-            "artifact_id": "artifact_test",
+            "artifact_id": None,
             "video_id": "video_test",
             "story_id": "story_test",
             "provider": "generic_http",
@@ -116,10 +116,15 @@ class ProviderGenerationPersistenceTests(unittest.TestCase):
             "storage_bytes": 1234,
         }
         executed_sql = []
+
+        def record_insert(sql, params=None):
+            executed_sql.append(("insert", sql))
+            row["artifact_id"] = params[0]
+
         insert_cursor = unittest.mock.MagicMock()
-        insert_cursor.execute.side_effect = lambda sql, params=None: executed_sql.append(("insert", sql))
+        insert_cursor.execute.side_effect = record_insert
         read_cursor = unittest.mock.MagicMock()
-        read_cursor.fetchone.return_value = row
+        read_cursor.fetchone.side_effect = lambda: dict(row)
         read_cursor.execute.side_effect = lambda sql, params=None: executed_sql.append(("readback", sql))
 
         insert_connection = unittest.mock.MagicMock()
