@@ -139,7 +139,9 @@ def generate_story_video(
     video_result = _call_gradio(
         video_space,
         "generate-video",
-        [video_input, video_prompt, 896, 512,         "Bright tones, overexposed, static, blurred details, subtitles, watermark, text, signature",
+        # The Space UI labels its dimensions in reverse of the backend width/height inputs.
+        # Pass width=512 first and height=896 second to produce a true 9:16 MP4.
+        [video_input, video_prompt, 512, 896,         "Bright tones, overexposed, static, blurred details, subtitles, watermark, text, signature",
          2.0, 1.0, 4, 42, True],
         timeout=timeout,
     )
