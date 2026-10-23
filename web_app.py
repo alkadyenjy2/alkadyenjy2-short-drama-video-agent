@@ -12,7 +12,8 @@ import uuid
 from urllib.parse import urlparse
 
 from http_video_generation import HTTPVideoGenerationAdapter
-from generated_artifact_store import persist_generated_artifact
+from generated_artifact_store import persist_generated_artifact, get_generated_artifact
+from cloudinary_playback import create_temporary_playback_url
 from cloudinary_storage import store_video_artifact
 from video_generation_adapter import VideoGenerationAccessError
 from persistence.repository import get_repository
@@ -337,6 +338,52 @@ def generate_video(req: GenerateRequest, authorization: str | None = Header(defa
         "character_bible_required": True,
         "publication_status": "NOT_PUBLISHED",
     }
+
+
+@app.get("/artifacts/{artifact_id}/playback")
+def artifact_playback(
+    artifact_id: str,
+    response: Response,
+    authorization: str | None = Header(default=None),
+):
+    """Issue a short-lived signed URL only to an authenticated service caller."""
+    expected_token = os.getenv("VIDEO_API_TOKEN", "").strip()
+    supplied_token = (authorization or "").removeprefix("Bearer ").strip()
+    if not expected_token:
+        raise HTTPException(503, "Playback authorization is not configured")
+    if not supplied_token or not hmac.compare_digest(supplied_token, expected_token):
+        raise HTTPException(401, "Unauthorized")
+
+    try:
+        artifact = get_generated_artifact(artifact_id)
+    except Exception as exc:
+        raise HTTPException(503, "Generated artifact metadata is unavailable") from exc
+    if artifact is None:
+        raise HTTPException(404, "Generated artifact not found")
+    if (
+        artifact.get("evidence_status") != "OBSERVED"
+        or artifact.get("storage_provider") != "cloudinary"
+        or not artifact.get("storage_public_id")
+        or not artifact.get("storage_asset_id")
+    ):
+        raise HTTPException(409, "Artifact is not verified for playback")
+
+    try:
+        playback = create_temporary_playback_url(artifact["storage_public_id"], ttl_seconds=300)
+    except (RuntimeError, ValueError) as exc:
+        raise HTTPException(503, "Secure playback URL could not be created") from exc
+
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    return {
+        "artifact_id": artifact["artifact_id"],
+        "video_id": artifact["video_id"],
+        "playback_url": playback["url"],
+        "expires_at": playback["expires_at"],
+        "expires_in_seconds": 300,
+        "publication_status": "NOT_PUBLISHED",
+    }
+
 
 if __name__ == "__main__":
     import uvicorn
