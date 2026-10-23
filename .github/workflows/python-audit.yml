@@ -8,6 +8,7 @@ on:
       - "http_video_generation.py"
       - "generated_artifact_store.py"
       - "cloudinary_storage.py"
+      - "cloudinary_playback.py"
       - "requirements.txt"
       - "health.py"
       - "trending_stories.json"
@@ -68,6 +69,7 @@ jobs:
       - run: python tests/test_web_app_videos.py
       - run: PYTHONPATH=. python tests/test_provider_generation_persistence.py
       - run: PYTHONPATH=. python tests/test_cloudinary_storage.py
+      - run: PYTHONPATH=. python tests/test_cloudinary_playback.py
       - run: PYTHONPATH=. python tests/test_http_video_generation_security.py
       - run: PYTHONPATH=. python tests/test_persistent_dashboard_database.py
       - run: PYTHONPATH=. python tests/test_backend_app.py
