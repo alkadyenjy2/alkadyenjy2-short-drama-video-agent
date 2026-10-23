@@ -62,6 +62,7 @@ class ProviderGenerationPersistenceTests(unittest.TestCase):
             "VIDEO_GENERATION_API_URL": "https://provider.example/generate",
             "VIDEO_GENERATION_API_KEY": "provider-secret",
             "VIDEO_API_TOKEN": "request-secret",
+            "DATABASE_URL": "postgresql://test:test@localhost/test",
         }, clear=False), patch("web_app.HTTPVideoGenerationAdapter") as adapter, patch(
             "web_app.store_video_artifact",
             return_value={
