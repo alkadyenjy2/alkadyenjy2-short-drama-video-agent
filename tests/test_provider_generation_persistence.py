@@ -33,6 +33,17 @@ class ProviderGenerationPersistenceTests(unittest.TestCase):
                 web_app.generate_video(request_body(), authorization="Bearer wrong")
         self.assertEqual(exc.exception.status_code, 401)
 
+    def test_http_provider_endpoint_is_rejected_before_calling_provider(self):
+        with patch.dict(os.environ, {
+            "VIDEO_GENERATION_API_URL": "http://provider.example/generate",
+            "VIDEO_GENERATION_API_KEY": "provider-secret",
+            "VIDEO_API_TOKEN": "request-secret",
+        }, clear=False), patch("web_app.HTTPVideoGenerationAdapter") as adapter:
+            with self.assertRaises(HTTPException) as exc:
+                web_app.generate_video(request_body(), authorization="Bearer request-secret")
+        self.assertEqual(exc.exception.status_code, 503)
+        adapter.assert_not_called()
+
     def test_provider_artifact_is_persisted_before_generated_status(self):
         artifact = VideoArtifact("https://media.example/episode.mp4", "generic_http", 8, "OBSERVED")
         with patch.dict(os.environ, {
