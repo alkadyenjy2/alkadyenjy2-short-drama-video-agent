@@ -1,4 +1,7 @@
-"""Durable metadata storage for copied provider-generated video artifacts."""
+"""Durable metadata storage for copied provider-generated video artifacts.
+
+Schema changes are managed by explicit SQL migrations, never by request handlers.
+"""
 import os
 import uuid
 from typing import Optional
@@ -20,42 +23,29 @@ def persist_generated_artifact(
     storage_asset_id: str,
     storage_bytes: int,
 ) -> dict:
-    """Insert storage evidence and verify the committed row can be read back."""
+    """Insert artifact evidence and verify the committed row can be read back."""
     database_url = os.getenv("DATABASE_URL", "").strip()
     if not database_url:
         raise RuntimeError("DATABASE_URL is required for durable generated-artifact storage")
     if evidence_status != "OBSERVED":
         raise RuntimeError("Only observed provider artifacts may be persisted as generated")
-    if storage_provider != "cloudinary" or not storage_public_id or not storage_asset_id or storage_bytes <= 0:
+    if (
+        storage_provider != "cloudinary"
+        or not storage_public_id
+        or not storage_asset_id
+        or isinstance(storage_bytes, bool)
+        or not isinstance(storage_bytes, int)
+        or storage_bytes <= 0
+    ):
         raise RuntimeError("A verified durable Cloudinary video asset is required")
+    if not video_id or not story_id or not provider or not artifact_url:
+        raise RuntimeError("Video, story, provider, and artifact identifiers are required")
 
     artifact_id = f"artifact_{uuid.uuid4().hex}"
+    # Intentionally no CREATE/ALTER here: deploy migrations separately before
+    # enabling generation. Missing/outdated schema must fail closed.
     with psycopg.connect(database_url, row_factory=dict_row) as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                """
-                CREATE TABLE IF NOT EXISTS generated_video_artifacts (
-                    artifact_id TEXT PRIMARY KEY,
-                    video_id TEXT NOT NULL,
-                    story_id TEXT NOT NULL,
-                    provider TEXT NOT NULL,
-                    artifact_url TEXT NOT NULL,
-                    duration_sec INTEGER,
-                    evidence_status TEXT NOT NULL,
-                    storage_provider TEXT NOT NULL DEFAULT 'cloudinary',
-                    storage_public_id TEXT NOT NULL,
-                    storage_asset_id TEXT NOT NULL,
-                    storage_bytes BIGINT NOT NULL,
-                    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-                )
-                """
-            )
-            # Safe additive migration for deployments where PR #20's metadata-only
-            # table may already exist from a previous generation request.
-            cur.execute("ALTER TABLE generated_video_artifacts ADD COLUMN IF NOT EXISTS storage_provider TEXT NOT NULL DEFAULT 'cloudinary'")
-            cur.execute("ALTER TABLE generated_video_artifacts ADD COLUMN IF NOT EXISTS storage_public_id TEXT")
-            cur.execute("ALTER TABLE generated_video_artifacts ADD COLUMN IF NOT EXISTS storage_asset_id TEXT")
-            cur.execute("ALTER TABLE generated_video_artifacts ADD COLUMN IF NOT EXISTS storage_bytes BIGINT")
             cur.execute(
                 """
                 INSERT INTO generated_video_artifacts
@@ -63,8 +53,10 @@ def persist_generated_artifact(
                      evidence_status, storage_provider, storage_public_id, storage_asset_id, storage_bytes)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
-                (artifact_id, video_id, story_id, provider, artifact_url, duration_sec,
-                 evidence_status, storage_provider, storage_public_id, storage_asset_id, storage_bytes),
+                (
+                    artifact_id, video_id, story_id, provider, artifact_url, duration_sec,
+                    evidence_status, storage_provider, storage_public_id, storage_asset_id, storage_bytes,
+                ),
             )
             cur.execute(
                 """
@@ -78,12 +70,16 @@ def persist_generated_artifact(
             if not row or (
                 row["artifact_url"] != artifact_url
                 or row["video_id"] != video_id
+                or row["story_id"] != story_id
+                or row["storage_provider"] != storage_provider
+                or row["storage_public_id"] != storage_public_id
                 or row["storage_asset_id"] != storage_asset_id
                 or row["storage_bytes"] != storage_bytes
                 or row["evidence_status"] != evidence_status
             ):
                 raise RuntimeError("Generated artifact persistence readback did not match")
     return {"artifact_id": artifact_id, "readback_verified": True, "artifact": dict(row)}
+
 
 def get_generated_artifact(artifact_id: str) -> Optional[dict]:
     """Read one durable artifact record without initializing or mutating schema."""
