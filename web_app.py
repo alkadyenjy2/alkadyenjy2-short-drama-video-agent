@@ -7,7 +7,13 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import requests
+import hmac
+import uuid
+from urllib.parse import urlparse
 
+from http_video_generation import HTTPVideoGenerationAdapter
+from generated_artifact_store import persist_generated_artifact
+from video_generation_adapter import VideoGenerationAccessError
 from persistence.repository import get_repository
 from visual_factory import get_agent_status, parse_story_to_beats
 from publisher import get_adapter_status, PublicationState
@@ -226,7 +232,7 @@ def list_videos():
                 pass
 
 @app.post("/generate")
-def generate_video(req: GenerateRequest):
+def generate_video(req: GenerateRequest, authorization: str | None = Header(default=None)):
     import json
     with open(os.path.join(os.path.dirname(__file__), "trending_stories.json"), "r", encoding="utf-8") as f:
         stories = json.load(f)
@@ -234,7 +240,70 @@ def generate_video(req: GenerateRequest):
     if not story:
         raise HTTPException(404, "Story not found")
     beats = parse_story_to_beats(story)
-    return {"story_id": req.story_id, "beats": beats, "status": "PLAN_ONLY", "generation_evidence": "NOT_AVAILABLE", "character_bible_required": True}
+
+    endpoint = os.getenv("VIDEO_GENERATION_API_URL", "").strip()
+    provider_key = os.getenv("VIDEO_GENERATION_API_KEY", "").strip()
+    if not endpoint or not provider_key:
+        return {
+            "story_id": req.story_id,
+            "beats": beats,
+            "status": "PLAN_ONLY",
+            "generation_evidence": "NOT_AVAILABLE",
+            "character_bible_required": True,
+            "reason": "VIDEO_GENERATION_API_URL and VIDEO_GENERATION_API_KEY must both be configured",
+        }
+
+    expected_token = os.getenv("VIDEO_API_TOKEN", "").strip()
+    supplied_token = (authorization or "").removeprefix("Bearer ").strip()
+    if not expected_token:
+        raise HTTPException(503, "Generation request authentication is not configured")
+    if not supplied_token or not hmac.compare_digest(supplied_token, expected_token):
+        raise HTTPException(401, "Unauthorized")
+
+    video_id = f"video_{req.story_id}_{uuid.uuid4().hex[:12]}"
+    try:
+        artifact = HTTPVideoGenerationAdapter().generate(
+            script=story.get("story_outline", ""),
+            scene_plan={"story_id": req.story_id, "beats": beats, "aspect_ratio": "9:16"},
+            output_format="mp4",
+        )
+    except (VideoGenerationAccessError, requests.RequestException, ValueError) as exc:
+        # Do not expose provider responses, credentials, or request headers.
+        raise HTTPException(502, "Video provider did not return a verified artifact") from exc
+
+    parsed_url = urlparse(artifact.artifact_url or "")
+    if parsed_url.scheme != "https" or not parsed_url.hostname:
+        raise HTTPException(502, "Provider artifact URL must be HTTPS")
+    if artifact.evidence_status != "OBSERVED":
+        raise HTTPException(502, "Provider artifact lacks observed generation evidence")
+
+    try:
+        stored = persist_generated_artifact(
+            video_id=video_id,
+            story_id=req.story_id,
+            provider=artifact.provider,
+            artifact_url=artifact.artifact_url,
+            duration_sec=artifact.duration_sec,
+            evidence_status=artifact.evidence_status,
+        )
+    except Exception as exc:
+        raise HTTPException(503, "Generated artifact could not be durably persisted and verified") from exc
+
+    if not stored.get("readback_verified"):
+        raise HTTPException(503, "Generated artifact persistence readback failed")
+    return {
+        "story_id": req.story_id,
+        "video_id": video_id,
+        "beats": beats,
+        "status": "GENERATED",
+        "generation_evidence": "PERSISTED_READBACK_VERIFIED",
+        "artifact_id": stored["artifact_id"],
+        "artifact_url": artifact.artifact_url,
+        "provider": artifact.provider,
+        "duration_sec": artifact.duration_sec,
+        "character_bible_required": True,
+        "publication_status": "NOT_PUBLISHED",
+    }
 
 if __name__ == "__main__":
     import uvicorn
