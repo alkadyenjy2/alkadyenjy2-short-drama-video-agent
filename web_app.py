@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 from typing import List, Dict
 from fastapi import FastAPI, Header, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import requests
