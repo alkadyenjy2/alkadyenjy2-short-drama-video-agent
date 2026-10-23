@@ -49,6 +49,14 @@ class CloudinaryPlaybackTests(unittest.TestCase):
                 create_temporary_playback_url("../outside/video")
         sign.assert_not_called()
 
+    def test_lookalike_cloudinary_hostname_is_rejected(self):
+        with patch.dict(os.environ, {"CLOUDINARY_URL": "cloudinary://key:secret@demo"}, clear=False), patch(
+            "cloudinary_playback.cloudinary.utils.private_download_url",
+            return_value="https://res.cloudinary.com.evil.example/video/authenticated/file.mp4",
+        ):
+            with self.assertRaises(RuntimeError):
+                create_temporary_playback_url("short-drama/video_test")
+
     def test_non_https_signed_url_is_rejected(self):
         with patch.dict(os.environ, {"CLOUDINARY_URL": "cloudinary://key:secret@demo"}, clear=False), patch(
             "cloudinary_playback.cloudinary.utils.private_download_url",
