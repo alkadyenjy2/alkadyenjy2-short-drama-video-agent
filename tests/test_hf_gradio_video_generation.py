@@ -6,7 +6,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import hf_gradio_video_generation as adapter
@@ -20,11 +20,11 @@ class HuggingFaceVideoGenerationTests(unittest.TestCase):
             {"url": "https://provider.invalid/frame.webp"},
             {"video": "https://provider.invalid/clip.mp4"},
         ]
-        response = Mock()
+        response = MagicMock()
         response.status_code = 200
         response.iter_content.return_value = [b"fake-mp4-bytes"]
-        response.__enter__ = lambda self: self
-        response.__exit__ = lambda self, *args: False
+        response.__enter__.return_value = response
+        response.__exit__.return_value = False
         get.return_value = response
 
         with tempfile.TemporaryDirectory() as output_dir:
