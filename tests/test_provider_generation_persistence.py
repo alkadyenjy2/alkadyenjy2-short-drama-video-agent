@@ -120,11 +120,12 @@ class ProviderGenerationPersistenceTests(unittest.TestCase):
         cursor.fetchone.return_value = row
         cursor.execute.side_effect = lambda sql, params=None: executed_sql.append(sql)
         connection = unittest.mock.MagicMock()
+        connection.__enter__.return_value = connection
         connection.cursor.return_value.__enter__.return_value = cursor
         with patch.dict(os.environ, {"DATABASE_URL": "postgresql://test:test@localhost/test"}, clear=False), patch(
             "generated_artifact_store.psycopg.connect", return_value=connection
         ):
-            generated_artifact_store.persist_generated_artifact(
+            result = generated_artifact_store.persist_generated_artifact(
                 video_id="video_test",
                 story_id="story_test",
                 provider="generic_http",
@@ -136,6 +137,7 @@ class ProviderGenerationPersistenceTests(unittest.TestCase):
                 storage_asset_id="asset_test",
                 storage_bytes=1234,
             )
+        self.assertTrue(result["readback_verified"])
         self.assertFalse(any("CREATE TABLE" in sql.upper() or "ALTER TABLE" in sql.upper() for sql in executed_sql))
 
 
