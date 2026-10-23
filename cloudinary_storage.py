@@ -24,7 +24,7 @@ def store_video_artifact(*, artifact_url: str, video_id: str, story_id: str) -> 
     result = cloudinary.uploader.upload(
         artifact_url,
         resource_type="video",
-        type="upload",
+        type="authenticated",
         folder="short-drama",
         public_id=video_id,
         overwrite=False,
