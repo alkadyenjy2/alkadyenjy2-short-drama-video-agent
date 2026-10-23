@@ -23,7 +23,7 @@ def persist_generated_artifact(
     storage_asset_id: str,
     storage_bytes: int,
 ) -> dict:
-    """Insert artifact evidence and verify the committed row can be read back."""
+    """Commit artifact metadata, then verify it from a fresh database connection."""
     database_url = os.getenv("DATABASE_URL", "").strip()
     if not database_url:
         raise RuntimeError("DATABASE_URL is required for durable generated-artifact storage")
@@ -58,6 +58,10 @@ def persist_generated_artifact(
                     evidence_status, storage_provider, storage_public_id, storage_asset_id, storage_bytes,
                 ),
             )
+
+    # A second connection verifies the row is visible after the first transaction committed.
+    with psycopg.connect(database_url, row_factory=dict_row) as conn:
+        with conn.cursor() as cur:
             cur.execute(
                 """
                 SELECT artifact_id, video_id, story_id, provider, artifact_url, duration_sec,
@@ -67,17 +71,20 @@ def persist_generated_artifact(
                 (artifact_id,),
             )
             row = cur.fetchone()
-            if not row or (
-                row["artifact_url"] != artifact_url
-                or row["video_id"] != video_id
-                or row["story_id"] != story_id
-                or row["storage_provider"] != storage_provider
-                or row["storage_public_id"] != storage_public_id
-                or row["storage_asset_id"] != storage_asset_id
-                or row["storage_bytes"] != storage_bytes
-                or row["evidence_status"] != evidence_status
-            ):
-                raise RuntimeError("Generated artifact persistence readback did not match")
+
+    if not row or (
+        row["artifact_id"] != artifact_id
+        or row["artifact_url"] != artifact_url
+        or row["video_id"] != video_id
+        or row["story_id"] != story_id
+        or row["provider"] != provider
+        or row["storage_provider"] != storage_provider
+        or row["storage_public_id"] != storage_public_id
+        or row["storage_asset_id"] != storage_asset_id
+        or row["storage_bytes"] != storage_bytes
+        or row["evidence_status"] != evidence_status
+    ):
+        raise RuntimeError("Generated artifact committed-row readback did not match")
     return {"artifact_id": artifact_id, "readback_verified": True, "artifact": dict(row)}
 
 
