@@ -51,16 +51,28 @@ class ProviderGenerationPersistenceTests(unittest.TestCase):
             "VIDEO_GENERATION_API_KEY": "provider-secret",
             "VIDEO_API_TOKEN": "request-secret",
         }, clear=False), patch("web_app.HTTPVideoGenerationAdapter") as adapter, patch(
+            "web_app.store_video_artifact",
+            return_value={
+                "artifact_url": "https://res.cloudinary.com/demo/video/upload/short-drama/video_test.mp4",
+                "storage_provider": "cloudinary",
+                "storage_public_id": "short-drama/video_test",
+                "storage_asset_id": "asset_test",
+                "storage_bytes": 123456,
+            },
+        ) as store, patch(
             "web_app.persist_generated_artifact",
             return_value={"artifact_id": "artifact_test", "readback_verified": True},
         ) as persist:
             adapter.return_value.generate.return_value = artifact
             result = web_app.generate_video(request_body(), authorization="Bearer request-secret")
         self.assertEqual(result["status"], "GENERATED")
-        self.assertEqual(result["generation_evidence"], "PERSISTED_READBACK_VERIFIED")
-        self.assertEqual(result["artifact_url"], artifact.artifact_url)
+        self.assertEqual(result["generation_evidence"], "CLOUDINARY_COPY_AND_DB_READBACK_VERIFIED")
+        self.assertEqual(result["artifact_url"], "https://res.cloudinary.com/demo/video/upload/short-drama/video_test.mp4")
         self.assertEqual(result["artifact_id"], "artifact_test")
+        store.assert_called_once()
         persist.assert_called_once()
+        self.assertEqual(persist.call_args.kwargs["storage_provider"], "cloudinary")
+        self.assertEqual(persist.call_args.kwargs["storage_asset_id"], "asset_test")
 
     def test_non_https_artifact_is_rejected(self):
         artifact = VideoArtifact("http://media.example/episode.mp4", "generic_http", 8, "OBSERVED")
