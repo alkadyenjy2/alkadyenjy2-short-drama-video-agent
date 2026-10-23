@@ -5,9 +5,15 @@ on:
     paths:
       - "main.py"
       - "web_app.py"
+      - "http_video_generation.py"
+      - "generated_artifact_store.py"
+      - "cloudinary_storage.py"
+      - "cloudinary_playback.py"
+      - "requirements.txt"
       - "health.py"
       - "trending_stories.json"
       - "persistence/**"
+      - "migrations/**"
       - "tests/**"
       - ".github/workflows/python-audit.yml"
   push:
@@ -39,6 +45,7 @@ on:
       - "health.py"
       - "trending_stories.json"
       - "persistence/**"
+      - "migrations/**"
       - ".github/workflows/python-audit.yml"
 jobs:
   tests:
@@ -62,6 +69,10 @@ jobs:
       - run: python tests/test_meta_finance_media_boundaries.py
       - run: python tests/test_meta_ads_and_http_generation.py
       - run: python tests/test_web_app_videos.py
+      - run: PYTHONPATH=. python tests/test_provider_generation_persistence.py
+      - run: PYTHONPATH=. python tests/test_cloudinary_storage.py
+      - run: PYTHONPATH=. python tests/test_cloudinary_playback.py
+      - run: PYTHONPATH=. python tests/test_http_video_generation_security.py
       - run: PYTHONPATH=. python tests/test_persistent_dashboard_database.py
       - run: PYTHONPATH=. python tests/test_backend_app.py
       - run: PYTHONPATH=. python tests/test_telegram_startup_mode.py

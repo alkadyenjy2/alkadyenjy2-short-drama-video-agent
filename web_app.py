@@ -2,12 +2,20 @@
 import os
 from datetime import datetime
 from typing import List, Dict
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Header, HTTPException
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import requests
+import hmac
+import uuid
+from urllib.parse import urlparse
 
+from http_video_generation import HTTPVideoGenerationAdapter
+from generated_artifact_store import persist_generated_artifact, get_generated_artifact
+from cloudinary_playback import create_temporary_playback_url
+from cloudinary_storage import store_video_artifact
+from video_generation_adapter import VideoGenerationAccessError
 from persistence.repository import get_repository
 from visual_factory import get_agent_status, parse_story_to_beats
 from publisher import get_adapter_status, PublicationState
@@ -226,7 +234,7 @@ def list_videos():
                 pass
 
 @app.post("/generate")
-def generate_video(req: GenerateRequest):
+def generate_video(req: GenerateRequest, authorization: str | None = Header(default=None)):
     import json
     with open(os.path.join(os.path.dirname(__file__), "trending_stories.json"), "r", encoding="utf-8") as f:
         stories = json.load(f)
@@ -234,7 +242,148 @@ def generate_video(req: GenerateRequest):
     if not story:
         raise HTTPException(404, "Story not found")
     beats = parse_story_to_beats(story)
-    return {"story_id": req.story_id, "beats": beats, "status": "PLAN_ONLY", "generation_evidence": "NOT_AVAILABLE", "character_bible_required": True}
+
+    endpoint = os.getenv("VIDEO_GENERATION_API_URL", "").strip()
+    provider_key = os.getenv("VIDEO_GENERATION_API_KEY", "").strip()
+    if not endpoint or not provider_key:
+        return {
+            "story_id": req.story_id,
+            "beats": beats,
+            "status": "PLAN_ONLY",
+            "generation_evidence": "NOT_AVAILABLE",
+            "character_bible_required": True,
+            "reason": "VIDEO_GENERATION_API_URL and VIDEO_GENERATION_API_KEY must both be configured",
+        }
+
+    expected_token = os.getenv("VIDEO_API_TOKEN", "").strip()
+    supplied_token = (authorization or "").removeprefix("Bearer ").strip()
+    if not expected_token:
+        raise HTTPException(503, "Generation request authentication is not configured")
+    if not supplied_token or not hmac.compare_digest(supplied_token, expected_token):
+        raise HTTPException(401, "Unauthorized")
+
+    # The provider API key is sent as a bearer token; never send it to plain HTTP
+    # or a URL containing embedded credentials.
+    provider_url = urlparse(endpoint)
+    if (
+        provider_url.scheme != "https"
+        or not provider_url.hostname
+        or provider_url.username is not None
+        or provider_url.password is not None
+    ):
+        raise HTTPException(503, "Video provider endpoint must be a valid HTTPS URL without embedded credentials")
+    if not os.getenv("DATABASE_URL", "").strip():
+        # Do not spend provider credits or upload a durable asset unless the
+        # canonical database is configured to record the artifact receipt.
+        raise HTTPException(503, "Durable artifact database is not configured")
+
+    video_id = f"video_{req.story_id}_{uuid.uuid4().hex[:12]}"
+    try:
+        artifact = HTTPVideoGenerationAdapter().generate(
+            script=story.get("story_outline", ""),
+            scene_plan={"story_id": req.story_id, "beats": beats, "aspect_ratio": "9:16"},
+            output_format="mp4",
+        )
+    except (VideoGenerationAccessError, requests.RequestException, ValueError) as exc:
+        # Do not expose provider responses, credentials, or request headers.
+        raise HTTPException(502, "Video provider did not return a verified artifact") from exc
+
+    parsed_url = urlparse(artifact.artifact_url or "")
+    if parsed_url.scheme != "https" or not parsed_url.hostname:
+        raise HTTPException(502, "Provider artifact URL must be HTTPS")
+    if artifact.evidence_status != "OBSERVED":
+        raise HTTPException(502, "Provider artifact lacks observed generation evidence")
+
+    try:
+        durable_asset = store_video_artifact(
+            artifact_url=artifact.artifact_url,
+            video_id=video_id,
+            story_id=req.story_id,
+        )
+    except Exception as exc:
+        # Fail closed: a temporary provider URL must never be reported as durable.
+        raise HTTPException(503, "Generated video could not be copied to durable storage") from exc
+
+    try:
+        stored = persist_generated_artifact(
+            video_id=video_id,
+            story_id=req.story_id,
+            provider=artifact.provider,
+            artifact_url=durable_asset["artifact_url"],
+            duration_sec=artifact.duration_sec,
+            evidence_status=artifact.evidence_status,
+            storage_provider=durable_asset["storage_provider"],
+            storage_public_id=durable_asset["storage_public_id"],
+            storage_asset_id=durable_asset["storage_asset_id"],
+            storage_bytes=durable_asset["storage_bytes"],
+        )
+    except Exception as exc:
+        raise HTTPException(503, "Generated artifact could not be durably persisted and verified") from exc
+
+    if not stored.get("readback_verified"):
+        raise HTTPException(503, "Generated artifact persistence readback failed")
+    return {
+        "story_id": req.story_id,
+        "video_id": video_id,
+        "beats": beats,
+        "status": "GENERATED",
+        "generation_evidence": "CLOUDINARY_COPY_AND_DB_READBACK_VERIFIED",
+        "artifact_id": stored["artifact_id"],
+        "artifact_url": durable_asset["artifact_url"],
+        "storage_provider": durable_asset["storage_provider"],
+        "storage_public_id": durable_asset["storage_public_id"],
+        "storage_bytes": durable_asset["storage_bytes"],
+        "provider": artifact.provider,
+        "duration_sec": artifact.duration_sec,
+        "character_bible_required": True,
+        "publication_status": "NOT_PUBLISHED",
+    }
+
+
+@app.get("/artifacts/{artifact_id}/playback")
+def artifact_playback(
+    artifact_id: str,
+    response: Response,
+    authorization: str | None = Header(default=None),
+):
+    """Issue a short-lived signed URL only to an authenticated service caller."""
+    expected_token = os.getenv("VIDEO_API_TOKEN", "").strip()
+    supplied_token = (authorization or "").removeprefix("Bearer ").strip()
+    if not expected_token:
+        raise HTTPException(503, "Playback authorization is not configured")
+    if not supplied_token or not hmac.compare_digest(supplied_token, expected_token):
+        raise HTTPException(401, "Unauthorized")
+
+    try:
+        artifact = get_generated_artifact(artifact_id)
+    except Exception as exc:
+        raise HTTPException(503, "Generated artifact metadata is unavailable") from exc
+    if artifact is None:
+        raise HTTPException(404, "Generated artifact not found")
+    if (
+        artifact.get("evidence_status") != "OBSERVED"
+        or artifact.get("storage_provider") != "cloudinary"
+        or not artifact.get("storage_public_id")
+        or not artifact.get("storage_asset_id")
+    ):
+        raise HTTPException(409, "Artifact is not verified for playback")
+
+    try:
+        playback = create_temporary_playback_url(artifact["storage_public_id"], ttl_seconds=300)
+    except (RuntimeError, ValueError) as exc:
+        raise HTTPException(503, "Secure playback URL could not be created") from exc
+
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    return {
+        "artifact_id": artifact["artifact_id"],
+        "video_id": artifact["video_id"],
+        "playback_url": playback["url"],
+        "expires_at": playback["expires_at"],
+        "expires_in_seconds": 300,
+        "publication_status": "NOT_PUBLISHED",
+    }
+
 
 if __name__ == "__main__":
     import uvicorn

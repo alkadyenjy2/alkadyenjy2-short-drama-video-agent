@@ -7,6 +7,7 @@ The provider contract remains explicit, so unsupported APIs cannot be marked com
 import os
 import time
 from typing import Dict, Optional
+from urllib.parse import urlsplit
 import requests
 
 from video_generation_adapter import VideoArtifact, VideoGenerationAccessError, VideoGenerationAdapter
@@ -45,6 +46,20 @@ class HTTPVideoGenerationAdapter(VideoGenerationAdapter):
         status_url = payload.get("status_url")
         if not job_id or not status_url:
             raise VideoGenerationAccessError("provider response has neither artifact_url nor job_id+status_url")
+        endpoint_parts = urlsplit(self.endpoint)
+        status_parts = urlsplit(status_url)
+        same_origin = (
+            endpoint_parts.scheme == "https"
+            and status_parts.scheme == "https"
+            and bool(endpoint_parts.hostname)
+            and endpoint_parts.scheme == status_parts.scheme
+            and endpoint_parts.hostname == status_parts.hostname
+            and endpoint_parts.port == status_parts.port
+            and not status_parts.username
+            and not status_parts.password
+        )
+        if not same_origin:
+            raise VideoGenerationAccessError("provider status_url must share the configured HTTPS origin")
         for _ in range(self.max_polls):
             time.sleep(self.poll_seconds)
             poll = requests.get(
