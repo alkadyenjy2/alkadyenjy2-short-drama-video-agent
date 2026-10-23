@@ -1,4 +1,4 @@
-"""Regression tests for the video inventory API.
+""""Regression tests for the video inventory API.
 
 These tests intentionally use a small repository fake and mocked HTTP transport;
 they do not call a video-generation provider or publish any media.
@@ -46,6 +46,18 @@ class VideoInventoryTests(unittest.TestCase):
             result = web_app.list_videos()
         self.assertEqual(result["videos"], versions)
         self.assertTrue(repo.initialized)
+
+    def test_story_catalog_has_selectable_story_and_generation_is_honestly_plan_only(self):
+        catalog = web_app.get_stories()
+        self.assertGreater(catalog["count"], 0, "production story catalog must not be empty")
+        story = catalog["stories"][0]
+        result = web_app.generate_video(
+            web_app.GenerateRequest(story_id=story["id"], user_id="catalog-regression-test")
+        )
+        self.assertEqual(result["story_id"], story["id"])
+        self.assertGreater(len(result["beats"]), 0)
+        self.assertEqual(result["status"], "PLAN_ONLY")
+        self.assertEqual(result["generation_evidence"], "NOT_AVAILABLE")
 
     def test_release_asset_catalog_lists_only_real_release_assets(self):
         result = web_app.list_release_assets()

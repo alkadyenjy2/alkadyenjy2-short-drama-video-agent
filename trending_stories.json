@@ -1,1 +1,22 @@
-[]
+[
+  {
+    "id": "the-last-voicemail-ep1",
+    "title": "THE LAST VOICEMAIL — الحلقة الأولى: المكالمة",
+    "story_outline": "تستقبل مايا رسالة صوتية من رقمها هي وبصوتها هي تحذرها من أن دانيال سيطلب منها مغادرة الشقة غدًا عند الثامنة وسبع عشرة دقيقة. تحاول مايا إخفاء خوفها لكن دانيال يسمعها تتحدث وحدها ويسألها عمن كانت تكلمه. في نهاية الليلة يصل إشعار جديد إلى هاتفها يحمل تحذيرًا واحدًا: لا تفتحي الظرف",
+    "beats": 3,
+    "hook": "وصلت رسالة من المستقبل… بصوتها هي",
+    "tags": ["دراما", "غموض", "رسالة_صوتية"],
+    "characters": [
+      {
+        "name": "Maya",
+        "look": "Egyptian woman in her late twenties, dark shoulder-length hair, expressive eyes, understated contemporary clothing"
+      },
+      {
+        "name": "Daniel",
+        "look": "Egyptian man in his early thirties, short dark hair, restrained expression, neutral contemporary clothing"
+      }
+    ],
+    "content_status": "original_fictional_story",
+    "generation_status": "PLAN_ONLY_UNTIL_PROVIDER_CONFIGURED"
+  }
+]

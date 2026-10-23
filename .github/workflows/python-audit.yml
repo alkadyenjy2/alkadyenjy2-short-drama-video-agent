@@ -6,6 +6,7 @@ on:
       - "main.py"
       - "web_app.py"
       - "health.py"
+      - "trending_stories.json"
       - "persistence/**"
       - "tests/**"
       - ".github/workflows/python-audit.yml"
@@ -36,6 +37,7 @@ on:
       - "http_video_generation.py"
       - "web_app.py"
       - "health.py"
+      - "trending_stories.json"
       - "persistence/**"
       - ".github/workflows/python-audit.yml"
 jobs:
