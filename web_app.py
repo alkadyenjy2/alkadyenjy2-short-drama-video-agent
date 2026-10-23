@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 
 from http_video_generation import HTTPVideoGenerationAdapter
 from generated_artifact_store import persist_generated_artifact
+from cloudinary_storage import store_video_artifact
 from video_generation_adapter import VideoGenerationAccessError
 from persistence.repository import get_repository
 from visual_factory import get_agent_status, parse_story_to_beats
@@ -289,13 +290,27 @@ def generate_video(req: GenerateRequest, authorization: str | None = Header(defa
         raise HTTPException(502, "Provider artifact lacks observed generation evidence")
 
     try:
+        durable_asset = store_video_artifact(
+            artifact_url=artifact.artifact_url,
+            video_id=video_id,
+            story_id=req.story_id,
+        )
+    except Exception as exc:
+        # Fail closed: a temporary provider URL must never be reported as durable.
+        raise HTTPException(503, "Generated video could not be copied to durable storage") from exc
+
+    try:
         stored = persist_generated_artifact(
             video_id=video_id,
             story_id=req.story_id,
             provider=artifact.provider,
-            artifact_url=artifact.artifact_url,
+            artifact_url=durable_asset["artifact_url"],
             duration_sec=artifact.duration_sec,
             evidence_status=artifact.evidence_status,
+            storage_provider=durable_asset["storage_provider"],
+            storage_public_id=durable_asset["storage_public_id"],
+            storage_asset_id=durable_asset["storage_asset_id"],
+            storage_bytes=durable_asset["storage_bytes"],
         )
     except Exception as exc:
         raise HTTPException(503, "Generated artifact could not be durably persisted and verified") from exc
@@ -307,9 +322,12 @@ def generate_video(req: GenerateRequest, authorization: str | None = Header(defa
         "video_id": video_id,
         "beats": beats,
         "status": "GENERATED",
-        "generation_evidence": "PERSISTED_READBACK_VERIFIED",
+        "generation_evidence": "CLOUDINARY_COPY_AND_DB_READBACK_VERIFIED",
         "artifact_id": stored["artifact_id"],
-        "artifact_url": artifact.artifact_url,
+        "artifact_url": durable_asset["artifact_url"],
+        "storage_provider": durable_asset["storage_provider"],
+        "storage_public_id": durable_asset["storage_public_id"],
+        "storage_bytes": durable_asset["storage_bytes"],
         "provider": artifact.provider,
         "duration_sec": artifact.duration_sec,
         "character_bible_required": True,
