@@ -101,7 +101,7 @@ class ProviderGenerationPersistenceTests(unittest.TestCase):
                 web_app.generate_video(request_body(), authorization="Bearer request-secret")
         self.assertEqual(exc.exception.status_code, 502)
 
-    def test_artifact_persistence_never_runs_schema_ddl_in_request_path(self):
+    def test_artifact_persistence_avoids_request_time_ddl_and_verifies_after_commit(self):
         row = {
             "artifact_id": "artifact_test",
             "video_id": "video_test",
@@ -116,15 +116,22 @@ class ProviderGenerationPersistenceTests(unittest.TestCase):
             "storage_bytes": 1234,
         }
         executed_sql = []
-        cursor = unittest.mock.MagicMock()
-        cursor.fetchone.return_value = row
-        cursor.execute.side_effect = lambda sql, params=None: executed_sql.append(sql)
-        connection = unittest.mock.MagicMock()
-        connection.__enter__.return_value = connection
-        connection.cursor.return_value.__enter__.return_value = cursor
+        insert_cursor = unittest.mock.MagicMock()
+        insert_cursor.execute.side_effect = lambda sql, params=None: executed_sql.append(("insert", sql))
+        read_cursor = unittest.mock.MagicMock()
+        read_cursor.fetchone.return_value = row
+        read_cursor.execute.side_effect = lambda sql, params=None: executed_sql.append(("readback", sql))
+
+        insert_connection = unittest.mock.MagicMock()
+        insert_connection.__enter__.return_value = insert_connection
+        insert_connection.cursor.return_value.__enter__.return_value = insert_cursor
+        read_connection = unittest.mock.MagicMock()
+        read_connection.__enter__.return_value = read_connection
+        read_connection.cursor.return_value.__enter__.return_value = read_cursor
+
         with patch.dict(os.environ, {"DATABASE_URL": "postgresql://test:test@localhost/test"}, clear=False), patch(
-            "generated_artifact_store.psycopg.connect", return_value=connection
-        ):
+            "generated_artifact_store.psycopg.connect", side_effect=[insert_connection, read_connection]
+        ) as connect:
             result = generated_artifact_store.persist_generated_artifact(
                 video_id="video_test",
                 story_id="story_test",
@@ -137,8 +144,11 @@ class ProviderGenerationPersistenceTests(unittest.TestCase):
                 storage_asset_id="asset_test",
                 storage_bytes=1234,
             )
+
         self.assertTrue(result["readback_verified"])
-        self.assertFalse(any("CREATE TABLE" in sql.upper() or "ALTER TABLE" in sql.upper() for sql in executed_sql))
+        self.assertEqual(connect.call_count, 2)
+        self.assertEqual([kind for kind, _ in executed_sql], ["insert", "readback"])
+        self.assertFalse(any("CREATE TABLE" in sql.upper() or "ALTER TABLE" in sql.upper() for _, sql in executed_sql))
 
 
 if __name__ == "__main__":
