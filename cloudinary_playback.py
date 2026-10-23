@@ -36,6 +36,6 @@ def create_temporary_playback_url(public_id: str, ttl_seconds: int = 300) -> dic
         {"resource_type": "video", "type": "authenticated", "expires_at": expires_at},
     )
     parsed = urlparse(url or "")
-    if parsed.scheme != "https" or not parsed.hostname or not parsed.hostname.endswith("cloudinary.com"):
+    if parsed.scheme != "https" or not parsed.hostname or not (parsed.hostname == "cloudinary.com" or parsed.hostname.endswith(".cloudinary.com")):
         raise RuntimeError("Cloudinary did not return a valid HTTPS playback URL")
     return {"url": url, "expires_at": expires_at}
