@@ -59,6 +59,7 @@ jobs:
       - run: python tests/test_learning_loop.py
       - run: python tests/test_meta_finance_media_boundaries.py
       - run: python tests/test_meta_ads_and_http_generation.py
+      - run: PYTHONPATH=. python tests/test_hf_gradio_video_generation.py
       - run: python tests/test_web_app_videos.py
       - run: PYTHONPATH=. python tests/test_persistent_dashboard_database.py
       - run: PYTHONPATH=. python tests/test_backend_app.py
