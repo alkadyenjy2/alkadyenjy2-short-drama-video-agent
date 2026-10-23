@@ -44,6 +44,18 @@ class ProviderGenerationPersistenceTests(unittest.TestCase):
         self.assertEqual(exc.exception.status_code, 503)
         adapter.assert_not_called()
 
+    def test_missing_database_fails_before_provider_call(self):
+        with patch.dict(os.environ, {
+            "VIDEO_GENERATION_API_URL": "https://provider.example/generate",
+            "VIDEO_GENERATION_API_KEY": "provider-secret",
+            "VIDEO_API_TOKEN": "request-secret",
+            "DATABASE_URL": "",
+        }, clear=False), patch("web_app.HTTPVideoGenerationAdapter") as adapter:
+            with self.assertRaises(HTTPException) as exc:
+                web_app.generate_video(request_body(), authorization="Bearer request-secret")
+        self.assertEqual(exc.exception.status_code, 503)
+        adapter.assert_not_called()
+
     def test_provider_artifact_is_persisted_before_generated_status(self):
         artifact = VideoArtifact("https://media.example/episode.mp4", "generic_http", 8, "OBSERVED")
         with patch.dict(os.environ, {
