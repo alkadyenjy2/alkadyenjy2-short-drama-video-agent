@@ -84,3 +84,26 @@ def persist_generated_artifact(
             ):
                 raise RuntimeError("Generated artifact persistence readback did not match")
     return {"artifact_id": artifact_id, "readback_verified": True, "artifact": dict(row)}
+
+def get_generated_artifact(artifact_id: str) -> Optional[dict]:
+    """Read one durable artifact record without initializing or mutating schema."""
+    database_url = os.getenv("DATABASE_URL", "").strip()
+    if not database_url:
+        raise RuntimeError("DATABASE_URL is required to read generated-artifact metadata")
+    if not isinstance(artifact_id, str) or not artifact_id.startswith("artifact_") or len(artifact_id) > 128:
+        raise ValueError("A valid artifact ID is required")
+
+    with psycopg.connect(database_url, row_factory=dict_row) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT artifact_id, video_id, story_id, provider, artifact_url,
+                       duration_sec, evidence_status, storage_provider,
+                       storage_public_id, storage_asset_id, storage_bytes, created_at
+                FROM generated_video_artifacts
+                WHERE artifact_id = %s
+                """,
+                (artifact_id,),
+            )
+            row = cur.fetchone()
+    return dict(row) if row else None
