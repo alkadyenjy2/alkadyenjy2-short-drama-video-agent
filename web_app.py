@@ -260,6 +260,17 @@ def generate_video(req: GenerateRequest, authorization: str | None = Header(defa
     if not supplied_token or not hmac.compare_digest(supplied_token, expected_token):
         raise HTTPException(401, "Unauthorized")
 
+    # The provider API key is sent as a bearer token; never send it to plain HTTP
+    # or a URL containing embedded credentials.
+    provider_url = urlparse(endpoint)
+    if (
+        provider_url.scheme != "https"
+        or not provider_url.hostname
+        or provider_url.username is not None
+        or provider_url.password is not None
+    ):
+        raise HTTPException(503, "Video provider endpoint must be a valid HTTPS URL without embedded credentials")
+
     video_id = f"video_{req.story_id}_{uuid.uuid4().hex[:12]}"
     try:
         artifact = HTTPVideoGenerationAdapter().generate(
