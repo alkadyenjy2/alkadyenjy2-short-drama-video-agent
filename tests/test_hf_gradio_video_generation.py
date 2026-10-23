@@ -29,7 +29,7 @@ class HuggingFaceVideoGenerationTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as output_dir:
             artifact = adapter.generate_story_video("A mysterious voicemail", output_dir=output_dir)
-            self.assertTrue(Path(artifact.local_path).is_file())
+            self.assertTrue(Path(artifact.local_path).is_file(), f'path={artifact.local_path}; files={[p.name for p in Path(output_dir).iterdir()]}')
 
         video_call = call_gradio.call_args_list[1]
         self.assertEqual(video_call.args[2][2:4], [512, 896])
