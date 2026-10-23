@@ -271,6 +271,10 @@ def generate_video(req: GenerateRequest, authorization: str | None = Header(defa
         or provider_url.password is not None
     ):
         raise HTTPException(503, "Video provider endpoint must be a valid HTTPS URL without embedded credentials")
+    if not os.getenv("DATABASE_URL", "").strip():
+        # Do not spend provider credits or upload a durable asset unless the
+        # canonical database is configured to record the artifact receipt.
+        raise HTTPException(503, "Durable artifact database is not configured")
 
     video_id = f"video_{req.story_id}_{uuid.uuid4().hex[:12]}"
     try:
