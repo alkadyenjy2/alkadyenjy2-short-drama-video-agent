@@ -181,8 +181,9 @@ def build_text_overlay_filter() -> str:
     step = SCENE_DURATION - TRANSITION
     for i in range(SCENES_PER_EPISODE):
         start = i * step
-        end = start + SCENE_DURATION
-        fade_out_start = SCENE_DURATION - 0.3
+        text_duration = step if i < SCENES_PER_EPISODE - 1 else SCENE_DURATION
+        end = start + text_duration
+        fade_out_start = text_duration - 0.3
         parts.append(
             f"[{SCENES_PER_EPISODE + i}:v]format=rgba,"
             f"fade=t=in:st=0:d=0.3:alpha=1,"
@@ -252,9 +253,11 @@ def render_episode(episode_id: str) -> Path:
         command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y"]
         for clip in clips:
             command += ["-i", str(clip)]
-        for overlay_path in text_overlays:
+        for i, overlay_path in enumerate(text_overlays):
+            text_duration = (SCENE_DURATION - TRANSITION
+                             if i < SCENES_PER_EPISODE - 1 else SCENE_DURATION)
             command += ["-loop", "1", "-framerate", str(FPS), "-t",
-                        f"{SCENE_DURATION:.6f}", "-i", str(overlay_path)]
+                        f"{text_duration:.6f}", "-i", str(overlay_path)]
         command += ["-i", str(audio_path), "-filter_complex",
                     build_xfade_filter() + ";" + build_text_overlay_filter() + ";[12:a]apad=pad_dur=60[aout]",
                     "-map", "[vfinal]", "-map", "[aout]", "-t", "60",
