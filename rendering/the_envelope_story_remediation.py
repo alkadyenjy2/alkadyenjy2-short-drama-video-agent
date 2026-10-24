@@ -97,6 +97,10 @@ BEATS = [
     ("THE DECISION", "decision"),
 ]
 CAMERAS = ["zoom_in", "pan_left", "zoom_shake", "pan_vertical", "dolly_in", "zoom_out"]
+EPISODES = [
+    {"episode": f"EP{i:02d}", "scenes": [{"name": BEATS[j][0], "camera": CAMERAS[j]} for j in range(SCENES_PER_EPISODE)]}
+    for i in range(1, 31)
+]
 
 
 def classify_artifact() -> str:
