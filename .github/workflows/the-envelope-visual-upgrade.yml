@@ -1,0 +1,50 @@
+name: THE ENVELOPE Visual Upgrade - EP01
+on:
+  workflow_dispatch:
+  push:
+    branches: ["fix/the-envelope-visual-upgrade-20261024"]
+    paths:
+      - "rendering/the_envelope_visual_upgrade.py"
+      - "rendering/test_the_envelope_visual_upgrade.py"
+      - ".github/workflows/the-envelope-visual-upgrade.yml"
+jobs:
+  render-ep01:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install free media tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg espeak-ng
+          python -m pip install --upgrade pip
+          python -m pip install pillow
+      - name: Run regression tests
+        run: python -m unittest rendering.test_the_envelope_visual_upgrade -v
+      - name: Render EP01 and run measured QA
+        run: python rendering/the_envelope_visual_upgrade.py --ep EP01
+      - name: Verify evidence report is complete
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("build/the-envelope-visual-upgrade/EP01_qa.json")
+          data = json.loads(p.read_text())
+          assert data["all_pass"], json.dumps(data, indent=2)
+          assert len(data["sha256"]) == 64
+          assert data["artifact_class"] == "DETERMINISTIC_MOTION_TEXT_FALLBACK"
+          assert len(data["motion_mean_diff_10_50_90"]) == 2
+          print(json.dumps(data, indent=2))
+          PY
+      - name: Upload EP01 MP4 and measured QA evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: the-envelope-ep01-visual-upgrade-evidence
+          path: |
+            build/the-envelope-visual-upgrade/EP01_60s_VISUAL_UPGRADE.mp4
+            build/the-envelope-visual-upgrade/EP01_qa.json
+          if-no-files-found: error
+          retention-days: 14
