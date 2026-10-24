@@ -1,0 +1,133 @@
+name: THE ENVELOPE Visual Upgrade - 30 Episodes
+on:
+  workflow_dispatch:
+  push:
+    branches: ["fix/the-envelope-visual-upgrade-20261024"]
+    paths:
+      - "rendering/the_envelope_visual_upgrade.py"
+      - "rendering/test_the_envelope_visual_upgrade.py"
+      - ".github/workflows/the-envelope-visual-upgrade.yml"
+      - "rendering/transition_readability.py"
+      - "rendering/test_transition_readability.py"
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install test dependency
+        run: python -m pip install pillow pytesseract
+      - name: Run renderer regression tests
+        run: python -m unittest rendering.test_the_envelope_visual_upgrade rendering.test_transition_readability -v
+
+  render-episodes:
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        episode:
+          - EP01
+          - EP02
+          - EP03
+          - EP04
+          - EP05
+          - EP06
+          - EP07
+          - EP08
+          - EP09
+          - EP10
+          - EP11
+          - EP12
+          - EP13
+          - EP14
+          - EP15
+          - EP16
+          - EP17
+          - EP18
+          - EP19
+          - EP20
+          - EP21
+          - EP22
+          - EP23
+          - EP24
+          - EP25
+          - EP26
+          - EP27
+          - EP28
+          - EP29
+          - EP30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install free media tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg espeak-ng tesseract-ocr
+          python -m pip install pillow pytesseract
+      - name: Render and verify ${{ matrix.episode }}
+        run: python rendering/the_envelope_visual_upgrade.py --ep ${{ matrix.episode }}
+      - name: Verify rendered transition titles with OCR
+        run: python rendering/transition_readability.py --video build/the-envelope-visual-upgrade/${{ matrix.episode }}_60s_VISUAL_UPGRADE.mp4
+      - name: Upload episode MP4 and measured QA
+        uses: actions/upload-artifact@v4
+        with:
+          name: the-envelope-${{ matrix.episode }}-visual-upgrade-evidence
+          path: |
+            build/the-envelope-visual-upgrade/${{ matrix.episode }}_60s_VISUAL_UPGRADE.mp4
+            build/the-envelope-visual-upgrade/${{ matrix.episode }}_qa.json
+          if-no-files-found: error
+          retention-days: 14
+
+  collect-evidence:
+    needs: render-episodes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Download all episode evidence
+        uses: actions/download-artifact@v4
+        with:
+          pattern: the-envelope-EP*-visual-upgrade-evidence
+          path: evidence/episodes
+          merge-multiple: true
+      - name: Verify all 30 episodes and create aggregate manifest
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("evidence/episodes")
+          reports = sorted(root.glob("EP*_qa.json"))
+          videos = sorted(root.glob("EP*_60s_VISUAL_UPGRADE.mp4"))
+          assert len(reports) == 30, f"Expected 30 QA reports, got {len(reports)}"
+          assert len(videos) == 30, f"Expected 30 MP4 files, got {len(videos)}"
+          records = [json.loads(p.read_text()) for p in reports]
+          failed = [r["episode"] for r in records if not r.get("all_pass")]
+          assert not failed, f"QA failed for: {failed}"
+          manifest = {
+              "series": "THE ENVELOPE",
+              "episode_count": len(records),
+              "all_pass": True,
+              "artifact_class": "DETERMINISTIC_MOTION_TEXT_FALLBACK",
+              "publication": "NOT_PERFORMED",
+              "episodes": records,
+          }
+          Path("evidence/manifest.json").write_text(json.dumps(manifest, indent=2))
+          print(json.dumps({"episode_count": len(records), "all_pass": True,
+                            "videos": len(videos), "qa_reports": len(reports)}, indent=2))
+          PY
+      - name: Upload complete 30-episode evidence package
+        uses: actions/upload-artifact@v4
+        with:
+          name: the-envelope-30-episode-visual-upgrade-evidence
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 14
