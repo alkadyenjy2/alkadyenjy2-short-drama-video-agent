@@ -19,8 +19,8 @@ class VisualUpgradeTests(unittest.TestCase):
         self.assertEqual(classify_artifact(), "DETERMINISTIC_MOTION_TEXT_FALLBACK")
 
     def test_xfade_offsets_produce_60_seconds(self):
-        offsets = [i * (60.0 / 6 + 0.8 * 5 / 6 - 0.8) for i in range(5)]
-        self.assertAlmostEqual(offsets[-1] + (60.0 / 6), 60.0, places=5)
+        offsets = [i * (60.0 / 6 + 0.8 * 5 / 6 - 0.8) for i in range(1, 6)]
+        self.assertAlmostEqual(offsets[-1] + (60.0 / 6 + 0.8 * 5 / 6), 60.0, places=5)
         graph = build_xfade_filter()
         self.assertIn("xfade=transition=fade:duration=0.8", graph)
         self.assertIn("offset=49.333333", graph)
