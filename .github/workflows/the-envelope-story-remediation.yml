@@ -8,6 +8,7 @@ on:
     paths:
       - "rendering/the_envelope_story_remediation.py"
       - "rendering/test_the_envelope_story_remediation.py"
+      - "rendering/story_transition_readability.py"
       - ".github/workflows/the-envelope-story-remediation.yml"
 
 permissions:
@@ -23,7 +24,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install free test dependency
-        run: python -m pip install pillow
+        run: python -m pip install pillow pytesseract
       - name: Run story-remediation regression tests
         run: python -m unittest rendering.test_the_envelope_story_remediation -v
 
@@ -74,10 +75,12 @@ jobs:
       - name: Install free media tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg espeak-ng
-          python -m pip install pillow
+          sudo apt-get install -y ffmpeg espeak-ng tesseract-ocr
+          python -m pip install pillow pytesseract
       - name: Render and verify ${{ matrix.episode }}
         run: python rendering/the_envelope_story_remediation.py --ep ${{ matrix.episode }}
+      - name: Verify rendered transition titles with OCR
+        run: python rendering/story_transition_readability.py --video build/the-envelope-story-remediation/${{ matrix.episode }}_60s_STORY_REMEDIATED.mp4
       - name: Upload MP4, measured QA, and contact sheet
         uses: actions/upload-artifact@v4
         with:

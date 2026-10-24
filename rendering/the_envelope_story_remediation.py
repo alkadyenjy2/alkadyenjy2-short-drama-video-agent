@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import textwrap
 from pathlib import Path
 
 from PIL import Image, ImageChops, ImageDraw, ImageFont, ImageStat
@@ -145,7 +146,7 @@ def load_font(size: int):
     return ImageFont.load_default()
 
 
-def draw_scene(profile: dict, beat_index: int, output: Path) -> None:
+def draw_scene(profile: dict, beat_index: int, output: Path, include_text: bool = True) -> None:
     """Draw location-specific geometry and story props for one beat."""
     base = profile["palette"]
     accent = profile["accent"]
@@ -240,20 +241,41 @@ def draw_scene(profile: dict, beat_index: int, output: Path) -> None:
         d.ellipse((520, 390, 625, 500), fill=(0, 0, 0, 225))
         d.polygon([(505, 500), (640, 500), (665, 720), (480, 720)], fill=(0, 0, 0, 205))
 
-    # Distinct captioning sourced from the real episode title/hook/body.
-    small = load_font(21)
-    title_font = load_font(34)
-    body_font = load_font(24)
+    # Text is rendered on a separate transparent layer after background crossfades.
+    if include_text:
+        small = load_font(21)
+        title_font = load_font(34)
+        body_font = load_font(24)
+        d.text((WIDTH // 2, 95), f'{profile["episode"]}  •  {profile["place"]}',
+               font=small, fill=(239, 224, 190, 255), anchor="mm")
+        d.text((WIDTH // 2, 170), BEATS[beat_index][0], font=title_font,
+               fill=(255, 248, 226, 255), anchor="mm", stroke_width=2, stroke_fill=(0, 0, 0, 220))
+        story_line = [profile["title"], profile["hook"], profile["body"],
+                      "A clue changes the scene.", "The pieces finally connect.", "One choice remains."][beat_index]
+        story_line = re.sub(r"\s+", " ", story_line).strip()[:100]
+        d.multiline_text((60, 1030), story_line, font=body_font,
+                         fill=(246, 239, 220, 255), spacing=7, stroke_width=1, stroke_fill=(0, 0, 0, 220))
+    d.rounded_rectangle((32, 32, WIDTH - 32, HEIGHT - 32), radius=24, outline=gold, width=2)
+    im.save(output)
+
+
+def draw_text_overlay(profile: dict, beat_index: int, output: Path) -> None:
+    """Render captions separately so xfade never blends outgoing and incoming text."""
+    im = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    small, title_font, body_font = load_font(21), load_font(34), load_font(24)
     d.text((WIDTH // 2, 95), f'{profile["episode"]}  •  {profile["place"]}',
-           font=small, fill=(239, 224, 190, 255), anchor="mm")
+           font=small, fill=(239, 224, 190, 255), anchor="mm",
+           stroke_width=1, stroke_fill=(0, 0, 0, 220))
     d.text((WIDTH // 2, 170), BEATS[beat_index][0], font=title_font,
-           fill=(255, 248, 226, 255), anchor="mm", stroke_width=2, stroke_fill=(0, 0, 0, 190))
+           fill=(255, 248, 226, 255), anchor="mm", stroke_width=2,
+           stroke_fill=(0, 0, 0, 220))
     story_line = [profile["title"], profile["hook"], profile["body"],
                   "A clue changes the scene.", "The pieces finally connect.", "One choice remains."][beat_index]
-    story_line = re.sub(r"\s+", " ", story_line).strip()[:100]
+    story_line = textwrap.fill(re.sub(r"\\s+", " ", story_line).strip()[:100], width=34)
     d.multiline_text((60, 1030), story_line, font=body_font,
-                     fill=(246, 239, 220, 255), spacing=7, stroke_width=1, stroke_fill=(0, 0, 0, 190))
-    d.rounded_rectangle((32, 32, WIDTH - 32, HEIGHT - 32), radius=24, outline=gold, width=2)
+                     fill=(246, 239, 220, 255), spacing=7, stroke_width=1,
+                     stroke_fill=(0, 0, 0, 220))
     im.save(output)
 
 
@@ -280,6 +302,30 @@ def build_xfade_filter() -> str:
     for i in range(1, SCENES_PER_EPISODE):
         out = "[vout]" if i == SCENES_PER_EPISODE - 1 else f"[x{i}]"
         parts.append(f"{previous}[v{i}]xfade=transition=fade:duration={TRANSITION:.1f}:offset={i * STEP_SECONDS:.6f}{out}")
+        previous = out
+    return ";".join(parts)
+
+
+def build_text_overlay_filter() -> str:
+    """Overlay one independently timed text layer per beat after background-only xfade."""
+    parts = []
+    previous = "[vout]"
+    for i in range(SCENES_PER_EPISODE):
+        start = i * STEP_SECONDS
+        text_duration = STEP_SECONDS if i < SCENES_PER_EPISODE - 1 else CLIP_SECONDS
+        end = start + text_duration
+        fade_out_start = max(0.0, text_duration - 0.3)
+        parts.append(
+            f"[{SCENES_PER_EPISODE + i}:v]format=rgba,"
+            f"fade=t=in:st=0:d=0.3:alpha=1,"
+            f"fade=t=out:st={fade_out_start:.6f}:d=0.3:alpha=1,"
+            f"setpts=PTS-STARTPTS+{start:.6f}/TB[txt{i}]"
+        )
+        out = "[vfinal]" if i == SCENES_PER_EPISODE - 1 else f"[vt{i}]"
+        parts.append(
+            f"{previous}[txt{i}]overlay=eof_action=pass:shortest=0:format=auto:"
+            f"enable='gte(t,{start:.6f})*lt(t,{end:.6f})'{out}"
+        )
         previous = out
     return ";".join(parts)
 
@@ -382,11 +428,13 @@ def render_episode(episode_id: str) -> dict:
     video_path = OUT / f"{episode_id}_60s_STORY_REMEDIATED.mp4"
     with tempfile.TemporaryDirectory(prefix="envelope-story-render-") as temp:
         tmp = Path(temp)
-        clips = []
+        clips, overlays = [], []
         for i, camera in enumerate(CAMERAS):
             still = tmp / f"scene_{i}.png"
+            overlay = tmp / f"text_{i}.png"
             clip = tmp / f"scene_{i}.mp4"
-            draw_scene(profile, i, still)
+            draw_scene(profile, i, still, include_text=False)
+            draw_text_overlay(profile, i, overlay)
             subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
                             "-loop", "1", "-framerate", str(FPS), "-i", str(still),
                             "-vf", camera_filter(camera), "-frames:v", "320", "-an",
@@ -394,6 +442,7 @@ def render_episode(episode_id: str) -> dict:
                             "-pix_fmt", "yuv420p", "-r", str(FPS), str(clip)],
                            check=True, capture_output=True)
             clips.append(clip)
+            overlays.append(overlay)
         audio = tmp / "narration.wav"
         narration = f'{profile["title"]}. {profile["hook"]} {profile["body"]}'
         subprocess.run(["espeak-ng", "-s", "145", "-w", str(audio), narration],
@@ -401,9 +450,13 @@ def render_episode(episode_id: str) -> dict:
         command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y"]
         for clip in clips:
             command += ["-i", str(clip)]
+        for i, overlay in enumerate(overlays):
+            text_duration = STEP_SECONDS if i < SCENES_PER_EPISODE - 1 else CLIP_SECONDS
+            command += ["-loop", "1", "-framerate", str(FPS), "-t",
+                        f"{text_duration:.6f}", "-i", str(overlay)]
         command += ["-i", str(audio), "-filter_complex",
-                    build_xfade_filter() + ";[6:a]apad=pad_dur=60[aout]",
-                    "-map", "[vout]", "-map", "[aout]", "-t", "60",
+                    build_xfade_filter() + ";" + build_text_overlay_filter() + ";[12:a]apad=pad_dur=60[aout]",
+                    "-map", "[vfinal]", "-map", "[aout]", "-t", "60",
                     "-c:v", "libx264", "-preset", "veryfast", "-crf", "22",
                     "-pix_fmt", "yuv420p", "-r", str(FPS),
                     "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart",
