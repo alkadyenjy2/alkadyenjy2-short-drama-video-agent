@@ -45,6 +45,64 @@ jobs:
               assert len(a["sha256"]) == 64
           print("THE_ENVELOPE_MEDIA_QA_PASS")
           PY
+      - name: Verify audible audio and non-black frames
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import re
+          import subprocess
+          import tempfile
+          from pathlib import Path
+          from PIL import Image, ImageStat
+
+          files = sorted(Path("build/the-envelope").glob("EP*_THE_ENVELOPE.mp4"))
+          assert len(files) == 30, f"Expected 30 MP4s, got {len(files)}"
+
+          def run(args):
+              return subprocess.run(args, capture_output=True, text=True)
+
+          for path in files:
+              probe = run([
+                  "ffprobe", "-v", "error", "-show_entries", "format=duration",
+                  "-of", "default=noprint_wrappers=1:nokey=1", str(path)
+              ])
+              assert probe.returncode == 0, f"{path.name}: ffprobe failed: {probe.stderr}"
+              duration = float(probe.stdout.strip())
+              audio = run([
+                  "ffmpeg", "-hide_banner", "-nostats", "-i", str(path),
+                  "-vn", "-af", "volumedetect", "-f", "null", "-"
+              ])
+              assert audio.returncode == 0, f"{path.name}: audio analysis failed"
+              match = re.search(r"mean_volume:\s*(-?inf|-?[0-9.]+)\s*dB", audio.stderr)
+              assert match, f"{path.name}: mean_volume missing"
+              mean_volume = match.group(1)
+              assert mean_volume != "-inf" and float(mean_volume) > -60.0, (
+                  f"{path.name}: mean_volume {mean_volume} dB is at/below -60 dB"
+              )
+
+              for pct in (10, 50, 90):
+                  at = duration * pct / 100
+                  with tempfile.NamedTemporaryFile(suffix=".png") as frame:
+                      snap = run([
+                          "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                          "-ss", f"{at:.3f}", "-i", str(path),
+                          "-frames:v", "1", frame.name
+                      ])
+                      assert snap.returncode == 0, f"{path.name}: frame extraction failed at {pct}%"
+                      with Image.open(frame.name) as im:
+                          gray = im.convert("L")
+                          mean = ImageStat.Stat(gray).mean[0]
+                          histogram = gray.histogram()
+                          nonblack = sum(histogram[9:])
+                          ratio = nonblack / (gray.width * gray.height)
+                          assert mean > 5.0 and ratio > 0.01, (
+                              f"{path.name}: likely black frame at {pct}% "
+                              f"(mean={mean:.2f}, nonblack_ratio={ratio:.4f})"
+                          )
+              print(f"PASS {path.name}: mean_volume={mean_volume} dB; frames=10/50/90%")
+          print("THE_ENVELOPE_AUDIO_VISUAL_QA_PASS")
+          PY
       - name: Upload evidence
         uses: actions/upload-artifact@v4
         with:
