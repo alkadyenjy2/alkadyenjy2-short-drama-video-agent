@@ -272,7 +272,7 @@ def draw_text_overlay(profile: dict, beat_index: int, output: Path) -> None:
            stroke_fill=(0, 0, 0, 220))
     story_line = [profile["title"], profile["hook"], profile["body"],
                   "A clue changes the scene.", "The pieces finally connect.", "One choice remains."][beat_index]
-    story_line = textwrap.fill(re.sub(r"\\s+", " ", story_line).strip()[:100], width=34)
+    story_line = textwrap.fill(re.sub(r"\s+", " ", story_line).strip()[:100], width=34)
     d.multiline_text((60, 1030), story_line, font=body_font,
                      fill=(246, 239, 220, 255), spacing=7, stroke_width=1,
                      stroke_fill=(0, 0, 0, 220))
