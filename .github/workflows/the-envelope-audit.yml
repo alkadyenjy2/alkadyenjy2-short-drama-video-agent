@@ -2,7 +2,7 @@ name: THE ENVELOPE Media QA
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, "fix/the-envelope-media-qa-gates-20261024"]
     paths:
       - "rendering/the_envelope_fallback.py"
       - ".github/workflows/the-envelope-audit.yml"
