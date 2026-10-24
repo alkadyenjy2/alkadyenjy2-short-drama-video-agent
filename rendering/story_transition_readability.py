@@ -56,7 +56,7 @@ def inspect_transitions(video: Path) -> dict:
             with Image.open(frame_path) as image:
                 # Beat title is centered near y=170; exclude the episode/place header at y=95.
                 crop = image.crop((70, 105, 650, 245))
-                text = pytesseract.image_to_string(crop, config="--psm 6")
+                text = pytesseract.image_to_string(crop, config="--psm 11")
             previous, current = BEAT_NAMES[idx - 1], BEAT_NAMES[idx]
             passed = transition_text_pass(text, previous, current)
             results.append({
