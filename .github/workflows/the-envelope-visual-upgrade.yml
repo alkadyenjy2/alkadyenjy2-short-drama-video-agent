@@ -1,12 +1,6 @@
 name: THE ENVELOPE Visual Upgrade - 30 Episodes
 on:
   workflow_dispatch:
-  push:
-    branches: ["fix/the-envelope-visual-upgrade-20261024"]
-    paths:
-      - "rendering/the_envelope_visual_upgrade.py"
-      - "rendering/test_the_envelope_visual_upgrade.py"
-      - ".github/workflows/the-envelope-visual-upgrade.yml"
 jobs:
   unit-tests:
     runs-on: ubuntu-latest
