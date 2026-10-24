@@ -14,7 +14,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageStat
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont, ImageStat
 from rendering.the_envelope_fallback import EPISODES as SOURCE_EPISODES
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -56,8 +56,11 @@ def motion_gate(diffs: list[float]) -> bool:
 
 
 def build_xfade_filter() -> str:
-    """Return the six-input video filter chain, with measured 60s timing."""
-    parts = []
+    """Normalize six clip inputs and crossfade to a 60-second final video."""
+    parts = [
+        f"[{i}:v]settb=AVTB,setpts=PTS-STARTPTS,fps={FPS},format=yuv420p[v{i}]"
+        for i in range(SCENES_PER_EPISODE)
+    ]
     step = SCENE_DURATION - TRANSITION
     previous = "[v0]"
     for i in range(1, SCENES_PER_EPISODE):
@@ -196,16 +199,12 @@ def render_episode(episode_id: str) -> Path:
         command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y"]
         for clip in clips:
             command += ["-i", str(clip)]
-        command += ["-i", str(audio_path), "-filter_complex", build_xfade_filter(),
-                    "-map", "[vout]", "-map", "6:a:0",
-                    "-af", "apad=pad_dur=60", "-t", "60",
+        command += ["-i", str(audio_path), "-filter_complex", build_xfade_filter() + ";[6:a]apad=pad_dur=60[aout]",
+                    "-map", "[vout]", "-map", "[aout]", "-t", "60",
                     "-c:v", "libx264", "-preset", "veryfast", "-crf", "22",
                     "-pix_fmt", "yuv420p", "-r", str(FPS),
                     "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart",
                     str(OUT / f"{episode_id}_60s_VISUAL_UPGRADE.mp4")]
-        # Apply audio padding to the mapped input using a second filter graph.
-        command[command.index("-filter_complex") + 1] += ";[6:a]apad=pad_dur=60[aout]"
-        command[command.index("-map") + 3] = "[aout]"
         run(command)
         result_path = OUT / f"{episode_id}_60s_VISUAL_UPGRADE.mp4"
         qa = quality_gates(result_path)
@@ -304,6 +303,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # ImageChops is intentionally imported here for a stable top-level test import.
-    from PIL import ImageChops
     main()
