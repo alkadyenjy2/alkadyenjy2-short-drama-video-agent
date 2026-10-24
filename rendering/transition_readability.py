@@ -48,7 +48,7 @@ def inspect_video(video: Path) -> dict:
     results = []
     with tempfile.TemporaryDirectory(prefix="envelope-transition-qa-") as temp:
         for idx in range(1, SCENES_PER_EPISODE):
-            timestamp = idx * STEP + 0.15
+            timestamp = idx * STEP + 0.4
             frame_path = Path(temp) / f"transition-{idx}.png"
             cmd = [
                 "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
