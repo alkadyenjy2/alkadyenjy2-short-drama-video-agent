@@ -11,13 +11,17 @@ import json
 import math
 import re
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont, ImageStat
-from rendering.the_envelope_fallback import EPISODES as SOURCE_EPISODES
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from rendering.the_envelope_fallback import EPISODES as SOURCE_EPISODES
+
 OUT = ROOT / "build" / "the-envelope-visual-upgrade"
 WIDTH, HEIGHT, FPS = 720, 1280, 30
 SCENES_PER_EPISODE = 6
