@@ -322,9 +322,10 @@ def build_text_overlay_filter() -> str:
             f"setpts=PTS-STARTPTS+{start:.6f}/TB[txt{i}]"
         )
         out = "[vfinal]" if i == SCENES_PER_EPISODE - 1 else f"[vt{i}]"
+        # Overlay PTS already places this caption in its exact scene interval.
+        # repeatlast=0 prevents the previous title from lingering after EOF.
         parts.append(
-            f"{previous}[txt{i}]overlay=eof_action=pass:shortest=0:format=auto:"
-            f"enable='gte(t,{start:.6f})*lt(t,{end:.6f})'{out}"
+            f"{previous}[txt{i}]overlay=eof_action=pass:repeatlast=0:shortest=0:format=auto{out}"
         )
         previous = out
     return ";".join(parts)

@@ -45,9 +45,10 @@ class StoryRemediationTests(unittest.TestCase):
         self.assertNotIn("text", graph.lower())
         text_graph = build_text_overlay_filter()
         self.assertEqual(text_graph.count("overlay="), 6)
-        self.assertNotIn("enable='between(t,", text_graph)
-        self.assertIn("enable='gte(t,0.000000)*lt(t,9.900000)'", text_graph)
-        self.assertIn("enable='gte(t,9.900000)*lt(t,19.800000)'", text_graph)
+        self.assertNotIn("enable=", text_graph)
+        self.assertIn("setpts=PTS-STARTPTS+0.000000/TB[txt0]", text_graph)
+        self.assertIn("setpts=PTS-STARTPTS+9.900000/TB[txt1]", text_graph)
+        self.assertIn("repeatlast=0", text_graph)
         self.assertNotIn("xfade=", text_graph)
 
     def test_transition_text_gate_rejects_double_exposure(self):
