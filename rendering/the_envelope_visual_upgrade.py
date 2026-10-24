@@ -90,7 +90,7 @@ def load_font(size: int):
     return ImageFont.load_default()
 
 
-def create_scene_image(episode: dict, scene_index: int, output: Path) -> None:
+def create_scene_image(episode: dict, scene_index: int, output: Path, include_text: bool = True) -> None:
     scene = episode["scenes"][scene_index]
     base = scene["palette"]
     im = Image.new("RGB", (WIDTH, HEIGHT))
@@ -136,20 +136,66 @@ def create_scene_image(episode: dict, scene_index: int, output: Path) -> None:
         draw.ellipse((410, 370, 585, 760), fill=(0, 0, 0, 170))
     # Corner light leak, restrained so the text remains legible.
     draw.ellipse((-180, -160, 210, 230), fill=(255, 177, 90, 20))
-    font_title, font_copy, font_small = load_font(36), load_font(25), load_font(20)
-    draw.text((WIDTH // 2, 100), f'{episode["episode"]}  /  THE ENVELOPE',
-              font=font_small, fill=(237, 221, 186, 255), anchor="mm")
-    draw.text((WIDTH // 2, 190), scene["name"], font=font_title,
-              fill=(255, 247, 225, 255), anchor="mm", stroke_width=2, stroke_fill=(0, 0, 0, 180))
-    draw.multiline_text((72, HEIGHT - 300), episode["title"], font=font_title,
-                        fill=(255, 255, 246, 255), spacing=12, stroke_width=2,
-                        stroke_fill=(0, 0, 0, 180))
-    copy = scene["line"]
-    draw.multiline_text((72, HEIGHT - 225), copy, font=font_copy,
-                        fill=(232, 220, 194, 255), spacing=8)
+    if include_text:
+        font_title, font_copy, font_small = load_font(36), load_font(25), load_font(20)
+        draw.text((WIDTH // 2, 100), f'{episode["episode"]}  /  THE ENVELOPE',
+                  font=font_small, fill=(237, 221, 186, 255), anchor="mm")
+        draw.text((WIDTH // 2, 190), scene["name"], font=font_title,
+                  fill=(255, 247, 225, 255), anchor="mm", stroke_width=2, stroke_fill=(0, 0, 0, 180))
+        draw.multiline_text((72, HEIGHT - 300), episode["title"], font=font_title,
+                            fill=(255, 255, 246, 255), spacing=12, stroke_width=2,
+                            stroke_fill=(0, 0, 0, 180))
+        copy = scene["line"]
+        draw.multiline_text((72, HEIGHT - 225), copy, font=font_copy,
+                            fill=(232, 220, 194, 255), spacing=8)
     im = im.filter(ImageFilter.GaussianBlur(radius=0.15))
     im.save(output, quality=95)
 
+
+
+def create_text_overlay(episode: dict, scene_index: int, output: Path) -> None:
+    """Render only transparent text; never bake titles into crossfaded backgrounds."""
+    scene = episode["scenes"][scene_index]
+    im = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(im)
+    font_title, font_copy, font_small = load_font(36), load_font(25), load_font(20)
+    draw.text((WIDTH // 2, 100), f'{episode["episode"]}  /  THE ENVELOPE',
+              font=font_small, fill=(237, 221, 186, 255), anchor="mm",
+              stroke_width=1, stroke_fill=(0, 0, 0, 220))
+    draw.text((WIDTH // 2, 190), scene["name"], font=font_title,
+              fill=(255, 247, 225, 255), anchor="mm", stroke_width=2,
+              stroke_fill=(0, 0, 0, 220))
+    draw.multiline_text((72, HEIGHT - 300), episode["title"], font=font_title,
+                        fill=(255, 255, 246, 255), spacing=12, stroke_width=2,
+                        stroke_fill=(0, 0, 0, 220))
+    draw.multiline_text((72, HEIGHT - 225), scene["line"], font=font_copy,
+                        fill=(232, 220, 194, 255), spacing=8,
+                        stroke_width=1, stroke_fill=(0, 0, 0, 200))
+    im.save(output)
+
+
+def build_text_overlay_filter() -> str:
+    """Overlay independently faded text after background-only crossfades."""
+    parts = []
+    previous = "[vout]"
+    step = SCENE_DURATION - TRANSITION
+    for i in range(SCENES_PER_EPISODE):
+        start = i * step
+        end = start + SCENE_DURATION
+        fade_out_start = SCENE_DURATION - 0.3
+        parts.append(
+            f"[{SCENES_PER_EPISODE + i}:v]format=rgba,"
+            f"fade=t=in:st=0:d=0.3:alpha=1,"
+            f"fade=t=out:st={fade_out_start:.6f}:d=0.3:alpha=1,"
+            f"setpts=PTS-STARTPTS+{start:.6f}/TB[txt{i}]"
+        )
+        out = "[vfinal]" if i == SCENES_PER_EPISODE - 1 else f"[vt{i}]"
+        parts.append(
+            f"{previous}[txt{i}]overlay=eof_action=pass:shortest=0:"
+            f"format=auto:enable='between(t,{start:.6f},{end:.6f})'{out}"
+        )
+        previous = out
+    return ";".join(parts)
 
 def camera_filter(camera: str) -> str:
     # zoompan generates 320 distinct frames from each source image.
@@ -183,13 +229,16 @@ def render_episode(episode_id: str) -> Path:
     OUT.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="envelope-visual-") as temp:
         tmp = Path(temp)
-        images, clips = [], []
+        images, clips, text_overlays = [], [], []
         for i, scene in enumerate(episode["scenes"]):
             image_path = tmp / f"scene{i}.png"
+            overlay_path = tmp / f"text{i}.png"
             clip_path = tmp / f"scene{i}.mp4"
-            create_scene_image(episode, i, image_path)
+            create_scene_image(episode, i, image_path, include_text=False)
+            create_text_overlay(episode, i, overlay_path)
             images.append(image_path)
-            # Each scene is 320 frames (10.6667s); xfade overlaps total 4s.
+            text_overlays.append(overlay_path)
+            # Backgrounds only are crossfaded; text is composited afterwards.
             vf = camera_filter(scene["camera"])
             run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
                  "-loop", "1", "-framerate", str(FPS), "-i", str(image_path),
@@ -203,8 +252,12 @@ def render_episode(episode_id: str) -> Path:
         command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y"]
         for clip in clips:
             command += ["-i", str(clip)]
-        command += ["-i", str(audio_path), "-filter_complex", build_xfade_filter() + ";[6:a]apad=pad_dur=60[aout]",
-                    "-map", "[vout]", "-map", "[aout]", "-t", "60",
+        for overlay_path in text_overlays:
+            command += ["-loop", "1", "-framerate", str(FPS), "-t",
+                        f"{SCENE_DURATION:.6f}", "-i", str(overlay_path)]
+        command += ["-i", str(audio_path), "-filter_complex",
+                    build_xfade_filter() + ";" + build_text_overlay_filter() + ";[12:a]apad=pad_dur=60[aout]",
+                    "-map", "[vfinal]", "-map", "[aout]", "-t", "60",
                     "-c:v", "libx264", "-preset", "veryfast", "-crf", "22",
                     "-pix_fmt", "yuv420p", "-r", str(FPS),
                     "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart",
