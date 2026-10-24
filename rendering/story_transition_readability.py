@@ -86,7 +86,10 @@ def main() -> None:
     if not args.video.is_file():
         raise SystemExit(f"VIDEO_NOT_FOUND: {args.video}")
     result = inspect_transitions(args.video)
+    report_path = args.video.with_name(f"{args.video.stem}_transition_qa.json")
+    report_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
     print(json.dumps(result, indent=2))
+    print(f"TRANSITION_QA_REPORT: {report_path}")
     if not result["all_pass"]:
         raise SystemExit(1)
 
