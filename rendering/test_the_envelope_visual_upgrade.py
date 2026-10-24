@@ -35,14 +35,18 @@ class VisualUpgradeTests(unittest.TestCase):
         self.assertEqual(text_graph.count("fade=t=in"), 6)
         self.assertEqual(text_graph.count("fade=t=out"), 6)
         self.assertIn("[vfinal]", text_graph)
-        # Text inputs are independent streams 6..11, never xfade inputs.
         self.assertIn("[6:v]format=rgba", text_graph)
         self.assertIn("[11:v]format=rgba", text_graph)
         self.assertNotIn("xfade=", text_graph)
-        # The first five text intervals stop exactly when the next begins.
-        self.assertIn("enable='between(t,0.000000,9.866667)'", text_graph)
-        self.assertIn("enable='between(t,9.866667,19.733333)'", text_graph)
-        self.assertIn("fade=t=out:st=9.566667:d=0.3:alpha=1", text_graph)
+
+    def test_text_intervals_are_half_open_to_prevent_double_exposure(self):
+        text_graph = build_text_overlay_filter()
+        # Adjacent between() intervals include their shared boundary in both
+        # overlays. Use [start, end) intervals so only one scene's text can be
+        # visible on a transition frame.
+        self.assertNotIn("enable='between(t,", text_graph)
+        self.assertIn("enable='gte(t,0.000000)*lt(t,9.866667)'", text_graph)
+        self.assertIn("enable='gte(t,9.866667)*lt(t,19.733333)'", text_graph)
 
     def test_motion_gate_rejects_static_frames(self):
         self.assertFalse(motion_gate([0.0, 0.0]))
