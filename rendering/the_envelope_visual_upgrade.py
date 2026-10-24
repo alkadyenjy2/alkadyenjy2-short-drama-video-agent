@@ -193,7 +193,7 @@ def build_text_overlay_filter() -> str:
         out = "[vfinal]" if i == SCENES_PER_EPISODE - 1 else f"[vt{i}]"
         parts.append(
             f"{previous}[txt{i}]overlay=eof_action=pass:shortest=0:"
-            f"format=auto:enable='between(t,{start:.6f},{end:.6f})'{out}"
+            f"format=auto:enable='gte(t,{start:.6f})*lt(t,{end:.6f})'{out}"
         )
         previous = out
     return ";".join(parts)
