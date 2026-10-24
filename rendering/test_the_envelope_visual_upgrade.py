@@ -39,6 +39,10 @@ class VisualUpgradeTests(unittest.TestCase):
         self.assertIn("[6:v]format=rgba", text_graph)
         self.assertIn("[11:v]format=rgba", text_graph)
         self.assertNotIn("xfade=", text_graph)
+        # The first five text intervals stop exactly when the next begins.
+        self.assertIn("enable='between(t,0.000000,9.866667)'", text_graph)
+        self.assertIn("enable='between(t,9.866667,19.733333)'", text_graph)
+        self.assertIn("fade=t=out:st=9.566667:d=0.3:alpha=1", text_graph)
 
     def test_motion_gate_rejects_static_frames(self):
         self.assertFalse(motion_gate([0.0, 0.0]))
