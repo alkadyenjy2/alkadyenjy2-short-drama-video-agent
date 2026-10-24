@@ -307,27 +307,23 @@ def build_xfade_filter() -> str:
 
 
 def build_text_overlay_filter() -> str:
-    """Overlay one independently timed text layer per beat after background-only xfade."""
+    """Concatenate six non-overlapping transparent caption clips, then overlay once."""
     parts = []
-    previous = "[vout]"
+    labels = []
     for i in range(SCENES_PER_EPISODE):
-        start = i * STEP_SECONDS
         text_duration = STEP_SECONDS if i < SCENES_PER_EPISODE - 1 else CLIP_SECONDS
-        end = start + text_duration
         fade_out_start = max(0.0, text_duration - 0.3)
+        label = f"txt{i}"
+        labels.append(f"[{label}]")
         parts.append(
             f"[{SCENES_PER_EPISODE + i}:v]format=rgba,"
             f"fade=t=in:st=0:d=0.3:alpha=1,"
             f"fade=t=out:st={fade_out_start:.6f}:d=0.3:alpha=1,"
-            f"setpts=PTS-STARTPTS+{start:.6f}/TB[txt{i}]"
+            f"trim=duration={text_duration:.6f},setpts=PTS-STARTPTS[{label}]"
         )
-        out = "[vfinal]" if i == SCENES_PER_EPISODE - 1 else f"[vt{i}]"
-        # Overlay PTS already places this caption in its exact scene interval.
-        # repeatlast=0 prevents the previous title from lingering after EOF.
-        parts.append(
-            f"{previous}[txt{i}]overlay=eof_action=pass:repeatlast=0:shortest=0:format=auto{out}"
-        )
-        previous = out
+    parts.append("".join(labels) + f"concat=n={SCENES_PER_EPISODE}:v=1:a=0,format=rgba[text]")
+    # A single overlay input prevents old and new caption layers from ever stacking.
+    parts.append("[vout][text]overlay=eof_action=pass:shortest=0:format=auto[vfinal]")
     return ";".join(parts)
 
 

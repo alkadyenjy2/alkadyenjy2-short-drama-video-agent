@@ -44,11 +44,12 @@ class StoryRemediationTests(unittest.TestCase):
         self.assertEqual(graph.count("xfade=transition=fade"), 5)
         self.assertNotIn("text", graph.lower())
         text_graph = build_text_overlay_filter()
-        self.assertEqual(text_graph.count("overlay="), 6)
+        self.assertEqual(text_graph.count("overlay="), 1)
+        self.assertIn("concat=n=6:v=1:a=0", text_graph)
         self.assertNotIn("enable=", text_graph)
-        self.assertIn("setpts=PTS-STARTPTS+0.000000/TB[txt0]", text_graph)
-        self.assertIn("setpts=PTS-STARTPTS+9.900000/TB[txt1]", text_graph)
-        self.assertIn("repeatlast=0", text_graph)
+        self.assertIn("trim=duration=9.900000,setpts=PTS-STARTPTS[txt0]", text_graph)
+        self.assertIn("trim=duration=9.900000,setpts=PTS-STARTPTS[txt1]", text_graph)
+        self.assertIn("[vout][text]overlay=", text_graph)
         self.assertNotIn("xfade=", text_graph)
 
     def test_transition_text_gate_rejects_double_exposure(self):
