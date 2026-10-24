@@ -5,6 +5,7 @@ from rendering.the_envelope_visual_upgrade import (
     EPISODES,
     SCENES_PER_EPISODE,
     build_xfade_filter,
+    build_text_overlay_filter,
     classify_artifact,
     motion_gate,
 )
@@ -24,6 +25,20 @@ class VisualUpgradeTests(unittest.TestCase):
         graph = build_xfade_filter()
         self.assertIn("xfade=transition=fade:duration=0.8", graph)
         self.assertIn("offset=49.333333", graph)
+
+    def test_text_is_not_part_of_background_crossfades(self):
+        graph = build_xfade_filter()
+        self.assertEqual(graph.count("xfade=transition=fade"), 5)
+        self.assertNotIn("text", graph.lower())
+        text_graph = build_text_overlay_filter()
+        self.assertEqual(text_graph.count("overlay="), 6)
+        self.assertEqual(text_graph.count("fade=t=in"), 6)
+        self.assertEqual(text_graph.count("fade=t=out"), 6)
+        self.assertIn("[vfinal]", text_graph)
+        # Text inputs are independent streams 6..11, never xfade inputs.
+        self.assertIn("[6:v]format=rgba", text_graph)
+        self.assertIn("[11:v]format=rgba", text_graph)
+        self.assertNotIn("xfade=", text_graph)
 
     def test_motion_gate_rejects_static_frames(self):
         self.assertFalse(motion_gate([0.0, 0.0]))
