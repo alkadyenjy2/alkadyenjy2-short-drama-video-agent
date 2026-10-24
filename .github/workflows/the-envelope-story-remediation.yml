@@ -1,0 +1,156 @@
+name: THE ENVELOPE Story-Specific Visual Remediation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix/the-envelope-story-remediation-20261024
+    paths:
+      - "rendering/the_envelope_story_remediation.py"
+      - "rendering/test_the_envelope_story_remediation.py"
+      - "rendering/story_transition_readability.py"
+      - ".github/workflows/the-envelope-story-remediation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install free test dependency
+        run: python -m pip install pillow pytesseract
+      - name: Run story-remediation regression tests
+        run: python -m unittest rendering.test_the_envelope_story_remediation -v
+
+  render-episodes:
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        episode:
+          - EP01
+          - EP02
+          - EP03
+          - EP04
+          - EP05
+          - EP06
+          - EP07
+          - EP08
+          - EP09
+          - EP10
+          - EP11
+          - EP12
+          - EP13
+          - EP14
+          - EP15
+          - EP16
+          - EP17
+          - EP18
+          - EP19
+          - EP20
+          - EP21
+          - EP22
+          - EP23
+          - EP24
+          - EP25
+          - EP26
+          - EP27
+          - EP28
+          - EP29
+          - EP30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install free media tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg espeak-ng tesseract-ocr
+          python -m pip install pillow pytesseract
+      - name: Render and verify ${{ matrix.episode }}
+        run: python rendering/the_envelope_story_remediation.py --ep ${{ matrix.episode }}
+      - name: Verify rendered transition titles with OCR
+        run: python rendering/story_transition_readability.py --video build/the-envelope-story-remediation/${{ matrix.episode }}_60s_STORY_REMEDIATED.mp4
+      - name: Upload MP4 and diagnostics, including OCR failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: the-envelope-${{ matrix.episode }}-story-remediation-evidence
+          path: |
+            build/the-envelope-story-remediation/${{ matrix.episode }}_60s_STORY_REMEDIATED.mp4
+            build/the-envelope-story-remediation/${{ matrix.episode }}_qa.json
+            build/the-envelope-story-remediation/${{ matrix.episode }}_contact_sheet.png
+            build/the-envelope-story-remediation/${{ matrix.episode }}_60s_STORY_REMEDIATED_transition_qa.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  collect-evidence:
+    needs: render-episodes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: the-envelope-EP*-story-remediation-evidence
+          path: evidence/episodes
+          merge-multiple: true
+      - name: Verify complete evidence set and visual profile diversity
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("evidence/episodes")
+          videos = sorted(root.glob("EP*_60s_STORY_REMEDIATED.mp4"))
+          reports = sorted(root.glob("EP*_qa.json"))
+          sheets = sorted(root.glob("EP*_contact_sheet.png"))
+          assert len(videos) == 30, f"Expected 30 MP4 files, found {len(videos)}"
+          assert len(reports) == 30, f"Expected 30 QA reports, found {len(reports)}"
+          assert len(sheets) == 30, f"Expected 30 contact sheets, found {len(sheets)}"
+          records = [json.loads(p.read_text(encoding="utf-8")) for p in reports]
+          failed = [r.get("episode") for r in records if not r.get("all_pass")]
+          assert not failed, f"QA failed: {failed}"
+          by_ep = {r["episode"]: r for r in records}
+          expected = {
+              "EP01": ("front_door", "brass_mailbox"),
+              "EP02": ("kitchen", "coffee_mug"),
+              "EP15": ("office", "scattered_letters"),
+              "EP30": ("attic_archive", "archive_chest"),
+          }
+          for ep, (place, prop) in expected.items():
+              assert by_ep[ep]["place_id"] == place, f"{ep}: unexpected place"
+              assert prop in by_ep[ep]["objects"], f"{ep}: missing story prop"
+          places = {r["place_id"] for r in records}
+          assert len(places) >= 6, f"Insufficient distinct visual locations: {sorted(places)}"
+          manifest = {
+              "series": "THE ENVELOPE",
+              "episode_count": len(records),
+              "video_count": len(videos),
+              "qa_report_count": len(reports),
+              "contact_sheet_count": len(sheets),
+              "all_pass": True,
+              "distinct_place_count": len(places),
+              "artifact_class": "DETERMINISTIC_MOTION_TEXT_FALLBACK",
+              "publication": "NOT_PERFORMED",
+              "episodes": records,
+          }
+          Path("evidence/manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+          print(json.dumps({k: manifest[k] for k in ("episode_count", "video_count", "qa_report_count", "contact_sheet_count", "all_pass", "distinct_place_count", "artifact_class")}, indent=2))
+          PY
+      - name: Upload full 30-episode evidence package
+        uses: actions/upload-artifact@v4
+        with:
+          name: the-envelope-30-episode-story-remediation-evidence
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 14
