@@ -477,7 +477,7 @@ def render_episode(episode_id: str) -> dict:
             "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
             "-f", "lavfi", "-i",
             "anoisesrc=color=brown:amplitude=0.25:sample_rate=48000:duration=60",
-            "-af", "lowpass=f=220,volume=0.10,afade=t=in:st=0:d=2,afade=t=out:st=56:d=4",
+            "-af", "lowpass=f=220,volume=0.15,afade=t=in:st=0:d=2,afade=t=out:st=56:d=4",
             "-c:a", "pcm_s16le", str(ambience),
         ], check=True, capture_output=True)
         command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y"]
