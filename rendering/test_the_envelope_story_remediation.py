@@ -99,8 +99,8 @@ class StoryRemediationTests(unittest.TestCase):
         self.assertTrue(transition_text_pass("THE 2 EEL\nTHE DECISION", "THE REVEAL", "THE DECISION"))
 
     def test_transition_ocr_samples_after_background_crossfade_and_title_fade_in(self):
-        self.assertAlmostEqual(transition_sample_timestamp(1), 12.5, places=3)
-        self.assertAlmostEqual(transition_sample_timestamp(5), 52.1, places=3)
+        self.assertAlmostEqual(transition_sample_timestamp(1), 13.5, places=3)
+        self.assertAlmostEqual(transition_sample_timestamp(5), 53.1, places=3)
 
     def test_classification_does_not_claim_ai_video_generation(self):
         self.assertEqual(classify_artifact(), "DETERMINISTIC_MOTION_TEXT_FALLBACK")
