@@ -84,10 +84,12 @@ def inspect_transitions(video: Path) -> dict:
                                 "pass": False, "error": (proc.stderr or "frame extraction failed")[-500:]})
                 continue
             with Image.open(frame_path) as image:
-                # Crop just the beat title and upscale/boost contrast for more reliable OCR.
+                # Crop the title, upscale, and combine two OCR layouts to reduce false negatives.
                 crop = image.crop((130, 125, 590, 215)).convert("L")
-                crop = ImageEnhance.Contrast(crop.resize((crop.width * 3, crop.height * 3))).enhance(1.5)
-                text = pytesseract.image_to_string(crop, config="--psm 11")
+                crop = ImageEnhance.Contrast(crop.resize((crop.width * 4, crop.height * 4))).enhance(2.0)
+                text_block = pytesseract.image_to_string(crop, config="--psm 6")
+                text_sparse = pytesseract.image_to_string(crop, config="--psm 11")
+                text = text_block + "\n" + text_sparse
             previous, current = BEAT_NAMES[idx - 1], BEAT_NAMES[idx]
             current_present = approximately_contains(current, text)
             previous_present = approximately_contains(previous, text)
@@ -104,7 +106,7 @@ def inspect_transitions(video: Path) -> dict:
             })
     return {
         "video": video.name,
-        "method": "TESSERACT_OCR_ON_STABLE_POST_TRANSITION_FRAMES_FUZZY_MATCH",
+        "method": "TESSERACT_OCR_ON_STABLE_POST_TRANSITION_FRAMES_MULTI_CONFIG_FUZZY_MATCH",
         "sample_count": len(results),
         "passed_count": sum(item.get("pass", False) for item in results),
         "all_pass": len(results) == SCENES_PER_EPISODE - 1 and all(item.get("pass", False) for item in results),
