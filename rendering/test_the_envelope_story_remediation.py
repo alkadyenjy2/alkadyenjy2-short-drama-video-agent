@@ -64,6 +64,7 @@ class StoryRemediationTests(unittest.TestCase):
         self.assertTrue(transition_text_pass("THEOBIECE", "WIDE ESTABLISHING", "THE OBJECT"))
         self.assertTrue(transition_text_pass("THE DECISlON", "THE REVEAL", "THE DECISION"))
         self.assertFalse(transition_text_pass("THE REVEAL", "THE REVEAL", "THE REACTION"))
+        self.assertTrue(transition_text_pass("THE 2 EEL\nTHE DECISION", "THE REVEAL", "THE DECISION"))
 
     def test_transition_ocr_samples_after_background_crossfade_and_title_fade_in(self):
         self.assertAlmostEqual(transition_sample_timestamp(1), 12.5, places=3)
