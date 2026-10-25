@@ -65,7 +65,9 @@ def approximately_contains(expected: str, observed: str, threshold: float = 0.75
         for observed_word in observed_words:
             if abs(len(word) - len(observed_word)) > 2:
                 continue
-            if SequenceMatcher(None, word, observed_word).ratio() >= max(threshold, 0.82):
+            # A one-character OCR substitution in a short word (CLUE -> GLUE)
+            # is still a plausible match; distinct scene titles remain far below this floor.
+            if SequenceMatcher(None, word, observed_word).ratio() >= max(threshold, 0.75):
                 return True
     return False
 
