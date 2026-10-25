@@ -61,6 +61,7 @@ class StoryRemediationTests(unittest.TestCase):
         self.assertIn("[12:a]apad=pad_dur=60[voice]", graph)
         self.assertIn("[13:a]volume=", graph)
         self.assertIn("amix=inputs=2:duration=longest", graph)
+        self.assertIn("normalize=0", graph)
         self.assertIn("[aout]", graph)
 
     def test_transition_text_gate_rejects_double_exposure(self):

@@ -332,7 +332,7 @@ def build_audio_filter() -> str:
     return (
         "[12:a]apad=pad_dur=60[voice];"
         "[13:a]volume=1.0[bed];"
-        "[voice][bed]amix=inputs=2:duration=longest:dropout_transition=0,"
+        "[voice][bed]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0,"
         "alimiter=limit=0.95[aout]"
     )
 
