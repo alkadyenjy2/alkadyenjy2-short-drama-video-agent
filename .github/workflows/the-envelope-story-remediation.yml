@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - fix/the-envelope-story-remediation-20261024
+      - fix/the-envelope-visual-diversity-20261025
     paths:
       - "rendering/the_envelope_story_remediation.py"
       - "rendering/test_the_envelope_story_remediation.py"
