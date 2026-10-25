@@ -1,4 +1,7 @@
 name: THE ENVELOPE Visual Upgrade - 30 Episodes
+run-name: THE ENVELOPE visual-upgrade QA / ${{ github.ref_name }} / ${{ github.sha }}
+permissions:
+  contents: read
 on:
   workflow_dispatch:
   push:
