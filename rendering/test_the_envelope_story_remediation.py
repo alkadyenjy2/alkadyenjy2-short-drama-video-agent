@@ -45,6 +45,16 @@ class StoryRemediationTests(unittest.TestCase):
         counts = {key: profiles.count(key) for key in set(profiles)}
         self.assertLessEqual(max(counts.values()), 3)
 
+    def test_archive_records_and_courthouse_use_separate_visual_profiles(self):
+        self.assertEqual(episode_profile("EP03")["profile_key"], "photo_archive")
+        self.assertEqual(episode_profile("EP08")["profile_key"], "records_room")
+        self.assertEqual(episode_profile("EP04")["profile_key"], "courthouse")
+        self.assertEqual(len({
+            episode_profile("EP03")["profile_key"],
+            episode_profile("EP08")["profile_key"],
+            episode_profile("EP04")["profile_key"],
+        }), 3)
+
     def test_motion_gate_checks_each_scene_and_rejects_static_beats(self):
         self.assertFalse(motion_gate([[0.1, 0.2]] * 6))
         self.assertTrue(motion_gate([[5.0, 8.0]] * 6))
