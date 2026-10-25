@@ -14,6 +14,7 @@ from rendering.the_envelope_story_remediation import (
 from rendering.story_transition_readability import (
     transition_sample_timestamp,
     transition_text_pass,
+    approximately_contains,
 )
 
 
@@ -80,6 +81,10 @@ class StoryRemediationTests(unittest.TestCase):
         self.assertIn("amix=inputs=2:duration=longest", graph)
         self.assertIn("normalize=0", graph)
         self.assertIn("[aout]", graph)
+
+    def test_transition_ocr_accepts_a_partially_misread_reveal_title(self):
+        self.assertTrue(approximately_contains("THE REVEAL", "REVEAR", threshold=0.75))
+        self.assertTrue(transition_text_pass("ris e REVEAR", "THE REACTION", "THE REVEAL"))
 
     def test_transition_text_gate_rejects_double_exposure(self):
         self.assertTrue(transition_text_pass("THE OBJECT", "WIDE ESTABLISHING", "THE OBJECT"))
