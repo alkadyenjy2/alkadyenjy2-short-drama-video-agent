@@ -2,6 +2,10 @@ name: THE ENVELOPE Story-Specific Visual Remediation
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+      - fix/the-envelope-visual-upgrade-20261024
   push:
     branches:
       - fix/the-envelope-story-remediation-20261024
