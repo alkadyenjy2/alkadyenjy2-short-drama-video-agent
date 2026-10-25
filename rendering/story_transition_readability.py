@@ -42,26 +42,29 @@ def approximately_contains(expected: str, observed: str, threshold: float = 0.75
     source = compact(observed)
     if not target or not source:
         return False
-    min_len = max(1, len(target) - 2)
-    max_len = len(target) + 2
-    full_title_threshold = max(threshold, 0.90)
-    for start in range(len(source)):
-        for size in range(min_len, min(max_len, len(source) - start) + 1):
-            if SequenceMatcher(None, target, source[start:start + size]).ratio() >= full_title_threshold:
-                return True
-
-    # OCR sometimes loses the short prefix ("THE") and reads a long title word
-    # imperfectly (e.g. REVEAL -> REVEAR). Compare whole observed tokens so a
-    # different neighboring word cannot match merely through a short substring.
     expected_words = re.findall(r"[a-z0-9]+", expected.lower())
     observed_words = re.findall(r"[a-z0-9]+", observed.lower())
+    if not expected_words or not observed_words:
+        return False
+
+    # Compare complete token windows, never arbitrary substrings. This avoids
+    # accepting a different title because a few letters happen to overlap.
+    phrase_threshold = max(threshold, 0.75)
+    for start in range(len(observed_words)):
+        for count in range(1, min(len(expected_words) + 1, len(observed_words) - start) + 1):
+            observed_phrase = compact(" ".join(observed_words[start:start + count]))
+            if SequenceMatcher(None, target, observed_phrase).ratio() >= phrase_threshold:
+                return True
+
+    # OCR can sometimes lose the prefix ("THE") and misread a distinctive word
+    # (REVEAL -> REVEAR). Whole-word matching allows that while rejecting
+    # neighboring titles such as REACTION -> REVEAL.
     for word in expected_words:
         if len(word) < 4:
             continue
         for observed_word in observed_words:
             if abs(len(word) - len(observed_word)) > 2:
                 continue
-            # This floor accepts REVEAR -> REVEAL but rejects REACTION -> REVEAL.
             if SequenceMatcher(None, word, observed_word).ratio() >= max(threshold, 0.82):
                 return True
     return False
