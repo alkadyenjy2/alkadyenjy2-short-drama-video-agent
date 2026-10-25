@@ -12,6 +12,7 @@ on:
 jobs:
   unit-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -131,3 +132,5 @@ jobs:
           path: evidence/
           if-no-files-found: error
           retention-days: 14
+
+# Re-run gate: validate the complete 30-episode visual-upgrade branch independently from baseline media.
