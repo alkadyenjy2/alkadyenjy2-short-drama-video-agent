@@ -9,6 +9,7 @@ from rendering.the_envelope_story_remediation import (
     classify_artifact,
     build_xfade_filter,
     build_text_overlay_filter,
+    build_audio_filter,
 )
 from rendering.story_transition_readability import (
     transition_sample_timestamp,
@@ -54,6 +55,13 @@ class StoryRemediationTests(unittest.TestCase):
         self.assertIn("trim=duration=9.900000,setpts=PTS-STARTPTS[txt1]", text_graph)
         self.assertIn("[vout][text]overlay=", text_graph)
         self.assertNotIn("xfade=", text_graph)
+
+    def test_audio_graph_mixes_narration_with_a_full_duration_ambient_bed(self):
+        graph = build_audio_filter()
+        self.assertIn("[12:a]apad=pad_dur=60[voice]", graph)
+        self.assertIn("[13:a]volume=", graph)
+        self.assertIn("amix=inputs=2:duration=longest", graph)
+        self.assertIn("[aout]", graph)
 
     def test_transition_text_gate_rejects_double_exposure(self):
         self.assertTrue(transition_text_pass("THE OBJECT", "WIDE ESTABLISHING", "THE OBJECT"))
