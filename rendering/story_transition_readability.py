@@ -44,7 +44,7 @@ def approximately_contains(expected: str, observed: str, threshold: float = 0.75
         return False
     min_len = max(1, len(target) - 2)
     max_len = len(target) + 2
-    full_title_threshold = max(threshold, 0.80)
+    full_title_threshold = max(threshold, 0.90)
     for start in range(len(source)):
         for size in range(min_len, min(max_len, len(source) - start) + 1):
             if SequenceMatcher(None, target, source[start:start + size]).ratio() >= full_title_threshold:
