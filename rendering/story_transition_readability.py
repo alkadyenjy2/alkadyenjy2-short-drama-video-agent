@@ -52,11 +52,12 @@ def approximately_contains(expected: str, observed: str, threshold: float = 0.75
 
 
 def transition_text_pass(ocr_text: str, previous_scene: str, current_scene: str) -> bool:
-    """Require the incoming title and reject a still-visible previous title."""
-    return (
-        approximately_contains(current_scene, ocr_text)
-        and not approximately_contains(previous_scene, ocr_text)
-    )
+    """Require the incoming title and reject a confidently detected previous title."""
+    current_present = approximately_contains(current_scene, ocr_text, threshold=0.75)
+    # Be stricter for absence checks: a weak OCR fragment should not be mistaken
+    # for a previous title and block an otherwise readable incoming scene.
+    previous_present = approximately_contains(previous_scene, ocr_text, threshold=0.82)
+    return current_present and not previous_present
 
 
 def transition_sample_timestamp(index: int) -> float:
@@ -91,8 +92,8 @@ def inspect_transitions(video: Path) -> dict:
                 text_sparse = pytesseract.image_to_string(crop, config="--psm 11")
                 text = text_block + "\n" + text_sparse
             previous, current = BEAT_NAMES[idx - 1], BEAT_NAMES[idx]
-            current_present = approximately_contains(current, text)
-            previous_present = approximately_contains(previous, text)
+            current_present = approximately_contains(current, text, threshold=0.75)
+            previous_present = approximately_contains(previous, text, threshold=0.82)
             passed = current_present and not previous_present
             results.append({
                 "transition": idx,
