@@ -38,6 +38,13 @@ class StoryRemediationTests(unittest.TestCase):
         self.assertNotEqual(episode_profile("EP03")["place_id"], episode_profile("EP30")["place_id"])
         self.assertTrue(episode_profile("EP05")["objects"])
 
+    def test_episode_profiles_are_diverse_and_never_repeat_back_to_back(self):
+        profiles = [episode_profile(f"EP{i:02d}")["profile_key"] for i in range(1, 31)]
+        self.assertGreaterEqual(len(set(profiles)), 10)
+        self.assertTrue(all(left != right for left, right in zip(profiles, profiles[1:])))
+        counts = {key: profiles.count(key) for key in set(profiles)}
+        self.assertLessEqual(max(counts.values()), 3)
+
     def test_motion_gate_checks_each_scene_and_rejects_static_beats(self):
         self.assertFalse(motion_gate([[0.1, 0.2]] * 6))
         self.assertTrue(motion_gate([[5.0, 8.0]] * 6))
