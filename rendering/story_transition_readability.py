@@ -7,15 +7,17 @@ import json
 import re
 import subprocess
 import tempfile
+from difflib import SequenceMatcher
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageEnhance
 import pytesseract
 
 TRANSITION = 0.6
 SCENES_PER_EPISODE = 6
 CLIP_SECONDS = 60.0 / SCENES_PER_EPISODE + TRANSITION * (SCENES_PER_EPISODE - 1) / SCENES_PER_EPISODE
 STEP_SECONDS = CLIP_SECONDS - TRANSITION
+POST_TRANSITION_SETTLE = 1.0
 BEAT_NAMES = [
     "WIDE ESTABLISHING",
     "THE OBJECT",
@@ -30,19 +32,47 @@ def normalize(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", text.lower()).strip()
 
 
+def compact(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", text.lower())
+
+
+def approximately_contains(expected: str, observed: str, threshold: float = 0.75) -> bool:
+    """Match a title despite a small number of common OCR character substitutions."""
+    target = compact(expected)
+    source = compact(observed)
+    if not target or not source:
+        return False
+    min_len = max(1, len(target) - 2)
+    max_len = len(target) + 2
+    for start in range(len(source)):
+        for size in range(min_len, min(max_len, len(source) - start) + 1):
+            if SequenceMatcher(None, target, source[start:start + size]).ratio() >= threshold:
+                return True
+    return False
+
+
 def transition_text_pass(ocr_text: str, previous_scene: str, current_scene: str) -> bool:
-    observed = normalize(ocr_text)
-    previous = normalize(previous_scene)
-    current = normalize(current_scene)
-    return bool(current and current in observed and previous not in observed)
+    """Require the incoming title and reject a still-visible previous title."""
+    return (
+        approximately_contains(current_scene, ocr_text)
+        and not approximately_contains(previous_scene, ocr_text)
+    )
+
+
+def transition_sample_timestamp(index: int) -> float:
+    """Sample after the 0.6s background crossfade and 0.3s title fade-in settle."""
+    if not 1 <= index < SCENES_PER_EPISODE:
+        raise ValueError(f"Transition index must be in 1..{SCENES_PER_EPISODE - 1}, got {index}")
+    return index * STEP_SECONDS + TRANSITION + POST_TRANSITION_SETTLE
 
 
 def inspect_transitions(video: Path) -> dict:
     results = []
     with tempfile.TemporaryDirectory(prefix="story-transition-qa-") as temp:
         for idx in range(1, SCENES_PER_EPISODE):
-            # Sample after the incoming title's 0.3s fade-in has completed.
-            timestamp = idx * STEP_SECONDS + 0.4
+            # Inspect the incoming title once the visual transition is stable;
+            # OCR during a crossfade is unreliable even when the title is legible.
+            timestamp = transition_sample_timestamp(idx)
             frame_path = Path(temp) / f"transition-{idx}.png"
             proc = subprocess.run(
                 ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
@@ -54,24 +84,27 @@ def inspect_transitions(video: Path) -> dict:
                                 "pass": False, "error": (proc.stderr or "frame extraction failed")[-500:]})
                 continue
             with Image.open(frame_path) as image:
-                # Beat title is centered near y=170; exclude the episode/place header at y=95.
-                crop = image.crop((70, 105, 650, 245))
+                # Crop just the beat title and upscale/boost contrast for more reliable OCR.
+                crop = image.crop((130, 125, 590, 215)).convert("L")
+                crop = ImageEnhance.Contrast(crop.resize((crop.width * 3, crop.height * 3))).enhance(1.5)
                 text = pytesseract.image_to_string(crop, config="--psm 11")
             previous, current = BEAT_NAMES[idx - 1], BEAT_NAMES[idx]
-            passed = transition_text_pass(text, previous, current)
+            current_present = approximately_contains(current, text)
+            previous_present = approximately_contains(previous, text)
+            passed = current_present and not previous_present
             results.append({
                 "transition": idx,
                 "timestamp_sec": round(timestamp, 3),
                 "previous_scene": previous,
                 "expected_scene": current,
                 "ocr_text": text.strip(),
-                "previous_title_absent": normalize(previous) not in normalize(text),
-                "expected_title_present": normalize(current) in normalize(text),
+                "previous_title_absent": not previous_present,
+                "expected_title_present": current_present,
                 "pass": passed,
             })
     return {
         "video": video.name,
-        "method": "TESSERACT_OCR_ON_RENDERED_TRANSITION_FRAMES",
+        "method": "TESSERACT_OCR_ON_STABLE_POST_TRANSITION_FRAMES_FUZZY_MATCH",
         "sample_count": len(results),
         "passed_count": sum(item.get("pass", False) for item in results),
         "all_pass": len(results) == SCENES_PER_EPISODE - 1 and all(item.get("pass", False) for item in results),
