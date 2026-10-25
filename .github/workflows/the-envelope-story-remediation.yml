@@ -116,7 +116,7 @@ jobs:
           from pathlib import Path
           root = Path("evidence/episodes")
           videos = sorted(root.glob("EP*_60s_STORY_REMEDIATED.mp4"))
-          reports = sorted(root.glob("EP*_qa.json"))
+          reports = sorted(root.glob("EP??_qa.json"))  # exclude *_transition_qa.json sidecar reports
           sheets = sorted(root.glob("EP*_contact_sheet.png"))
           assert len(videos) == 30, f"Expected 30 MP4 files, found {len(videos)}"
           assert len(reports) == 30, f"Expected 30 QA reports, found {len(reports)}"
