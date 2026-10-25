@@ -374,7 +374,7 @@ def quality_gates(path: Path, profile: dict) -> dict:
              "-i", str(path), "-vn", "-af", "volumedetect", "-f", "null", "-"],
             capture_output=True, text=True,
         )
-        segment_match = re.search(r"mean_volume:\\s*(-?inf|-?[0-9.]+)\\s*dB", segment.stderr)
+        segment_match = re.search(r"mean_volume:\s*(-?inf|-?[0-9.]+)\s*dB", segment.stderr)
         segment_value = segment_match.group(1) if segment_match else "NOT_FOUND"
         try:
             segment_pass = segment.returncode == 0 and segment_value not in ("-inf", "NOT_FOUND") and math.isfinite(float(segment_value)) and float(segment_value) > -50
