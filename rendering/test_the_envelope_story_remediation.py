@@ -1,5 +1,9 @@
 """Story-specific visual remediation regression tests."""
 import unittest
+import tempfile
+from pathlib import Path
+
+from PIL import Image
 
 from rendering.the_envelope_story_remediation import (
     EPISODES,
@@ -10,6 +14,7 @@ from rendering.the_envelope_story_remediation import (
     build_xfade_filter,
     build_text_overlay_filter,
     build_audio_filter,
+    draw_text_overlay,
 )
 from rendering.story_transition_readability import (
     transition_sample_timestamp,
@@ -92,6 +97,16 @@ class StoryRemediationTests(unittest.TestCase):
         self.assertTrue(transition_text_pass("THE OBJECT", "WIDE ESTABLISHING", "THE OBJECT"))
         self.assertFalse(transition_text_pass("WIDE ESTABLISHING THE OBJECT", "WIDE ESTABLISHING", "THE OBJECT"))
         self.assertFalse(transition_text_pass("WIDE ESTABLISHING", "WIDE ESTABLISHING", "THE OBJECT"))
+
+    def test_title_overlay_has_dark_high_contrast_banner(self):
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / "title-overlay.png"
+            draw_text_overlay(episode_profile("EP21"), 1, output)
+            with Image.open(output) as image:
+                self.assertEqual(image.mode, "RGBA")
+                red, green, blue, alpha = image.getpixel((80, 150))
+                self.assertGreater(alpha, 180)
+                self.assertLess(max(red, green, blue), 60)
 
     def test_transition_text_gate_tolerates_minor_ocr_misreads_but_not_wrong_titles(self):
         self.assertTrue(transition_text_pass("THEOBIECE", "WIDE ESTABLISHING", "THE OBJECT"))
