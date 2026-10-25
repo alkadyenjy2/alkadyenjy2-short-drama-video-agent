@@ -37,7 +37,7 @@ def compact(text: str) -> str:
 
 
 def approximately_contains(expected: str, observed: str, threshold: float = 0.75) -> bool:
-    """Match a title despite a small number of common OCR character substitutions."""
+    """Match full titles or distinctive words despite OCR dropping/misreading characters."""
     target = compact(expected)
     source = compact(observed)
     if not target or not source:
@@ -48,6 +48,19 @@ def approximately_contains(expected: str, observed: str, threshold: float = 0.75
         for size in range(min_len, min(max_len, len(source) - start) + 1):
             if SequenceMatcher(None, target, source[start:start + size]).ratio() >= threshold:
                 return True
+
+    # OCR sometimes loses the short prefix ("THE") and reads a long title word
+    # imperfectly (e.g. REVEAL -> REVEAR). Match a distinctive word as a fallback.
+    words = re.findall(r"[a-z0-9]+", expected.lower())
+    for word in words:
+        if len(word) < 4:
+            continue
+        lower_size = max(4, len(word) - 2)
+        upper_size = min(len(word) + 2, len(source))
+        for start in range(len(source)):
+            for size in range(lower_size, min(upper_size, len(source) - start) + 1):
+                if SequenceMatcher(None, word, source[start:start + size]).ratio() >= threshold:
+                    return True
     return False
 
 
