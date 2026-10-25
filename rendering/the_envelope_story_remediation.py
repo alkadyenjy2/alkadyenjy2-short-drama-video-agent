@@ -327,6 +327,16 @@ def build_text_overlay_filter() -> str:
     return ";".join(parts)
 
 
+def build_audio_filter() -> str:
+    """Keep narration and a low ambient bed audible across the full 60-second episode."""
+    return (
+        "[12:a]apad=pad_dur=60[voice];"
+        "[13:a]volume=1.0[bed];"
+        "[voice][bed]amix=inputs=2:duration=longest:dropout_transition=0,"
+        "alimiter=limit=0.95[aout]"
+    )
+
+
 def image_diff(left: Image.Image, right: Image.Image) -> float:
     a = left.convert("L").resize((180, 320))
     b = right.convert("L").resize((180, 320))
@@ -356,6 +366,22 @@ def quality_gates(path: Path, profile: dict) -> dict:
         audio_pass = volume not in ("-inf", "NOT_FOUND") and math.isfinite(float(volume)) and float(volume) > -60
     except ValueError:
         audio_pass = False
+    # A global mean can hide a short voice clip followed by silence. Measure every 10s.
+    audio_segment_volumes = []
+    for start in range(0, 60, 10):
+        segment = subprocess.run(
+            ["ffmpeg", "-hide_banner", "-nostats", "-ss", str(start), "-t", "10",
+             "-i", str(path), "-vn", "-af", "volumedetect", "-f", "null", "-"],
+            capture_output=True, text=True,
+        )
+        segment_match = re.search(r"mean_volume:\\s*(-?inf|-?[0-9.]+)\\s*dB", segment.stderr)
+        segment_value = segment_match.group(1) if segment_match else "NOT_FOUND"
+        try:
+            segment_pass = segment.returncode == 0 and segment_value not in ("-inf", "NOT_FOUND") and math.isfinite(float(segment_value)) and float(segment_value) > -50
+        except ValueError:
+            segment_pass = False
+        audio_segment_volumes.append({"start_sec": start, "mean_volume_db": segment_value, "pass": segment_pass})
+    audio_sustain_pass = len(audio_segment_volumes) == 6 and all(x["pass"] for x in audio_segment_volumes)
     frame_means = []
     scene_diffs = []
     with tempfile.TemporaryDirectory(prefix="envelope-story-qa-") as temp:
@@ -399,6 +425,7 @@ def quality_gates(path: Path, profile: dict) -> dict:
         "full_decode": decode.returncode == 0,
         "sha256": len(sha) == 64,
         "audio_mean_volume_above_minus60db": audio_pass,
+        "audio_sustained_every_10s_above_minus50db": audio_sustain_pass,
         "frames_10_50_90_not_black": len(frame_means) == 3 and all(v > 10 for v in frame_means),
         "within_scene_motion_all_six_beats": motion_gate(scene_diffs),
         "contact_sheet_created": (path.with_name(f"{profile['episode']}_contact_sheet.png")).exists(),
@@ -408,7 +435,8 @@ def quality_gates(path: Path, profile: dict) -> dict:
         "place_id": profile["place_id"], "objects": profile["objects"],
         "duration_sec": duration, "width": video.get("width"), "height": video.get("height"),
         "video_codec": video.get("codec_name"), "audio_codec": audio.get("codec_name"),
-        "mean_volume_db": volume, "frame_mean_luminance_10_50_90": frame_means,
+        "mean_volume_db": volume, "audio_segment_mean_volume_db": audio_segment_volumes,
+        "frame_mean_luminance_10_50_90": frame_means,
         "within_scene_motion_mean_diffs": scene_diffs, "sha256": sha,
         "size_bytes": path.stat().st_size, "artifact_class": classify_artifact(),
         "checks": checks, "all_pass": all(checks.values()),
@@ -444,6 +472,14 @@ def render_episode(episode_id: str) -> dict:
         narration = f'{profile["title"]}. {profile["hook"]} {profile["body"]}'
         subprocess.run(["espeak-ng", "-s", "145", "-w", str(audio), narration],
                        check=True, capture_output=True)
+        ambience = tmp / "ambient_bed.wav"
+        subprocess.run([
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            "-f", "lavfi", "-i",
+            "anoisesrc=color=brown:amplitude=0.25:sample_rate=48000:duration=60",
+            "-af", "lowpass=f=220,volume=0.10,afade=t=in:st=0:d=2,afade=t=out:st=56:d=4",
+            "-c:a", "pcm_s16le", str(ambience),
+        ], check=True, capture_output=True)
         command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y"]
         for clip in clips:
             command += ["-i", str(clip)]
@@ -451,8 +487,8 @@ def render_episode(episode_id: str) -> dict:
             text_duration = STEP_SECONDS if i < SCENES_PER_EPISODE - 1 else CLIP_SECONDS
             command += ["-loop", "1", "-framerate", str(FPS), "-t",
                         f"{text_duration:.6f}", "-i", str(overlay)]
-        command += ["-i", str(audio), "-filter_complex",
-                    build_xfade_filter() + ";" + build_text_overlay_filter() + ";[12:a]apad=pad_dur=60[aout]",
+        command += ["-i", str(audio), "-i", str(ambience), "-filter_complex",
+                    build_xfade_filter() + ";" + build_text_overlay_filter() + ";" + build_audio_filter(),
                     "-map", "[vfinal]", "-map", "[aout]", "-t", "60",
                     "-c:v", "libx264", "-preset", "veryfast", "-crf", "22",
                     "-pix_fmt", "yuv420p", "-r", str(FPS),
