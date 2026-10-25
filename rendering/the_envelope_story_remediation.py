@@ -284,6 +284,7 @@ def draw_scene(profile: dict, beat_index: int, output: Path, include_text: bool 
         body_font = load_font(24)
         d.text((WIDTH // 2, 95), f'{profile["episode"]}  •  {profile["place"]}',
                font=small, fill=(239, 224, 190, 255), anchor="mm")
+        d.rectangle((70, 130, 650, 210), fill=(8, 10, 12, 220), outline=(184, 151, 91, 255), width=2)
         d.text((WIDTH // 2, 170), BEATS[beat_index][0], font=title_font,
                fill=(255, 248, 226, 255), anchor="mm", stroke_width=1, stroke_fill=(0, 0, 0, 220))
         story_line = [profile["title"], profile["hook"], profile["body"],
@@ -303,8 +304,10 @@ def draw_text_overlay(profile: dict, beat_index: int, output: Path) -> None:
     d.text((WIDTH // 2, 95), f'{profile["episode"]}  •  {profile["place"]}',
            font=small, fill=(239, 224, 190, 255), anchor="mm",
            stroke_width=1, stroke_fill=(0, 0, 0, 220))
+    # Dark contrast banner keeps titles readable on bright sets and reduces OCR misses.
+    d.rectangle((70, 130, 650, 210), fill=(8, 10, 12, 220), outline=(184, 151, 91, 255), width=2)
     d.text((WIDTH // 2, 170), BEATS[beat_index][0], font=title_font,
-           fill=(255, 248, 226, 255), anchor="mm", stroke_width=2,
+           fill=(255, 248, 226, 255), anchor="mm", stroke_width=1,
            stroke_fill=(0, 0, 0, 220))
     story_line = [profile["title"], profile["hook"], profile["body"],
                   "A clue changes the scene.", "The pieces finally connect.", "One choice remains."][beat_index]
