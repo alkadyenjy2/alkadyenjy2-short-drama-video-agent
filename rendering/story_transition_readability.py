@@ -44,25 +44,26 @@ def approximately_contains(expected: str, observed: str, threshold: float = 0.75
         return False
     min_len = max(1, len(target) - 2)
     max_len = len(target) + 2
+    full_title_threshold = max(threshold, 0.80)
     for start in range(len(source)):
         for size in range(min_len, min(max_len, len(source) - start) + 1):
-            if SequenceMatcher(None, target, source[start:start + size]).ratio() >= threshold:
+            if SequenceMatcher(None, target, source[start:start + size]).ratio() >= full_title_threshold:
                 return True
 
     # OCR sometimes loses the short prefix ("THE") and reads a long title word
-    # imperfectly (e.g. REVEAL -> REVEAR). Match a distinctive word as a fallback.
-    words = re.findall(r"[a-z0-9]+", expected.lower())
-    for word in words:
+    # imperfectly (e.g. REVEAL -> REVEAR). Compare whole observed tokens so a
+    # different neighboring word cannot match merely through a short substring.
+    expected_words = re.findall(r"[a-z0-9]+", expected.lower())
+    observed_words = re.findall(r"[a-z0-9]+", observed.lower())
+    for word in expected_words:
         if len(word) < 4:
             continue
-        lower_size = max(4, len(word) - 2)
-        upper_size = min(len(word) + 2, len(source))
-        for start in range(len(source)):
-            for size in range(lower_size, min(upper_size, len(source) - start) + 1):
-                # A stricter floor avoids accepting a neighboring but wrong word
-                # (e.g. "REACTION" as "REVEAL") while still allowing REVEAR -> REVEAL.
-                if SequenceMatcher(None, word, source[start:start + size]).ratio() >= max(threshold, 0.82):
-                    return True
+        for observed_word in observed_words:
+            if abs(len(word) - len(observed_word)) > 2:
+                continue
+            # This floor accepts REVEAR -> REVEAL but rejects REACTION -> REVEAL.
+            if SequenceMatcher(None, word, observed_word).ratio() >= max(threshold, 0.82):
+                return True
     return False
 
 
