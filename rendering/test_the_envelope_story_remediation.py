@@ -10,7 +10,10 @@ from rendering.the_envelope_story_remediation import (
     build_xfade_filter,
     build_text_overlay_filter,
 )
-from rendering.story_transition_readability import transition_text_pass
+from rendering.story_transition_readability import (
+    transition_sample_timestamp,
+    transition_text_pass,
+)
 
 
 class StoryRemediationTests(unittest.TestCase):
@@ -56,6 +59,15 @@ class StoryRemediationTests(unittest.TestCase):
         self.assertTrue(transition_text_pass("THE OBJECT", "WIDE ESTABLISHING", "THE OBJECT"))
         self.assertFalse(transition_text_pass("WIDE ESTABLISHING THE OBJECT", "WIDE ESTABLISHING", "THE OBJECT"))
         self.assertFalse(transition_text_pass("WIDE ESTABLISHING", "WIDE ESTABLISHING", "THE OBJECT"))
+
+    def test_transition_text_gate_tolerates_minor_ocr_misreads_but_not_wrong_titles(self):
+        self.assertTrue(transition_text_pass("THEOBIECE", "WIDE ESTABLISHING", "THE OBJECT"))
+        self.assertTrue(transition_text_pass("THE DECISlON", "THE REVEAL", "THE DECISION"))
+        self.assertFalse(transition_text_pass("THE REVEAL", "THE REVEAL", "THE REACTION"))
+
+    def test_transition_ocr_samples_after_background_crossfade_and_title_fade_in(self):
+        self.assertAlmostEqual(transition_sample_timestamp(1), 11.5, places=3)
+        self.assertAlmostEqual(transition_sample_timestamp(5), 51.1, places=3)
 
     def test_classification_does_not_claim_ai_video_generation(self):
         self.assertEqual(classify_artifact(), "DETERMINISTIC_MOTION_TEXT_FALLBACK")
