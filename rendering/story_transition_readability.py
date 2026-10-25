@@ -17,7 +17,7 @@ TRANSITION = 0.6
 SCENES_PER_EPISODE = 6
 CLIP_SECONDS = 60.0 / SCENES_PER_EPISODE + TRANSITION * (SCENES_PER_EPISODE - 1) / SCENES_PER_EPISODE
 STEP_SECONDS = CLIP_SECONDS - TRANSITION
-POST_TRANSITION_SETTLE = 2.0
+POST_TRANSITION_SETTLE = 3.0
 BEAT_NAMES = [
     "WIDE ESTABLISHING",
     "THE OBJECT",
@@ -37,16 +37,37 @@ def compact(text: str) -> str:
 
 
 def approximately_contains(expected: str, observed: str, threshold: float = 0.75) -> bool:
-    """Match a title despite a small number of common OCR character substitutions."""
+    """Match full titles or distinctive words despite OCR dropping/misreading characters."""
     target = compact(expected)
     source = compact(observed)
     if not target or not source:
         return False
-    min_len = max(1, len(target) - 2)
-    max_len = len(target) + 2
-    for start in range(len(source)):
-        for size in range(min_len, min(max_len, len(source) - start) + 1):
-            if SequenceMatcher(None, target, source[start:start + size]).ratio() >= threshold:
+    expected_words = re.findall(r"[a-z0-9]+", expected.lower())
+    observed_words = re.findall(r"[a-z0-9]+", observed.lower())
+    if not expected_words or not observed_words:
+        return False
+
+    # Compare complete token windows, never arbitrary substrings. This avoids
+    # accepting a different title because a few letters happen to overlap.
+    phrase_threshold = max(threshold, 0.75)
+    for start in range(len(observed_words)):
+        for count in range(1, min(len(expected_words) + 1, len(observed_words) - start) + 1):
+            observed_phrase = compact(" ".join(observed_words[start:start + count]))
+            if SequenceMatcher(None, target, observed_phrase).ratio() >= phrase_threshold:
+                return True
+
+    # OCR can sometimes lose the prefix ("THE") and misread a distinctive word
+    # (REVEAL -> REVEAR). Whole-word matching allows that while rejecting
+    # neighboring titles such as REACTION -> REVEAL.
+    for word in expected_words:
+        if len(word) < 4:
+            continue
+        for observed_word in observed_words:
+            if abs(len(word) - len(observed_word)) > 2:
+                continue
+            # A one-character OCR substitution in a short word (CLUE -> GLUE)
+            # is still a plausible match; distinct scene titles remain far below this floor.
+            if SequenceMatcher(None, word, observed_word).ratio() >= max(threshold, 0.75):
                 return True
     return False
 

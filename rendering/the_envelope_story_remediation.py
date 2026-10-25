@@ -73,9 +73,20 @@ PROFILES = {
                    "palette": (53, 54, 50), "accent": (190, 175, 145)},
 }
 
-# Episode-specific anchors follow the source story beats. Other episodes are selected
-# from title/hook/body keywords, with a deterministic episode-number fallback.
-EXPLICIT_PROFILES = {"EP01": "front_door", "EP02": "kitchen", "EP15": "office", "EP30": "attic_archive"}
+# Curated episode-to-location mapping follows the source story beats while spreading
+# repeated locations across the season. No adjacent episodes share a visual profile.
+EXPLICIT_PROFILES = {
+    "EP01": "front_door", "EP02": "kitchen", "EP03": "photo_archive",
+    "EP04": "courthouse", "EP05": "hallway_mirror", "EP06": "bedroom",
+    "EP07": "locked_room", "EP08": "records_room", "EP09": "apartment",
+    "EP10": "office", "EP11": "stairwell", "EP12": "courthouse",
+    "EP13": "photo_archive", "EP14": "hallway_mirror", "EP15": "office",
+    "EP16": "stairwell", "EP17": "courthouse", "EP18": "photo_archive",
+    "EP19": "apartment", "EP20": "bedroom", "EP21": "records_room",
+    "EP22": "bedroom", "EP23": "locked_room", "EP24": "apartment",
+    "EP25": "office", "EP26": "hallway_mirror", "EP27": "records_room",
+    "EP28": "locked_room", "EP29": "front_door", "EP30": "attic_archive",
+}
 KEYWORD_PROFILES = [
     (("attic", "archive", "final", "closure", "last truth"), "attic_archive"),
     (("torn", "twist", "scissors", "map", "investigated", "betrayal", "betrayed"), "office"),
@@ -112,14 +123,9 @@ def episode_profile(episode_id: str) -> dict:
     if episode_id not in {f"EP{i:02d}" for i in range(1, 31)}:
         raise ValueError(f"Unknown episode: {episode_id}")
     source = SOURCE_EPISODES[int(episode_id[2:]) - 1]
-    text = " ".join(str(v).lower() for v in source)
-    key = EXPLICIT_PROFILES.get(episode_id)
-    if key is None:
-        key = next((profile for words, profile in KEYWORD_PROFILES if any(word in text for word in words)), None)
-    if key is None:
-        # Deterministic rotation across physically distinct locations, not color-only variation.
-        candidates = ["courthouse", "bedroom", "stairwell", "photo_archive", "locked_room", "hallway_mirror"]
-        key = candidates[(int(episode_id[2:]) - 1) % len(candidates)]
+    # The mapping is explicit so common words such as "envelope", "room", and
+    # "photo" cannot collapse unrelated episodes onto the same visual backdrop.
+    key = EXPLICIT_PROFILES[episode_id]
     profile = dict(PROFILES[key])
     profile["episode"] = episode_id
     profile["title"], profile["hook"], profile["body"] = source
@@ -144,6 +150,15 @@ def load_font(size: int):
         if Path(name).exists():
             return ImageFont.truetype(name, size=size)
     return ImageFont.load_default()
+
+
+def load_title_font(size: int):
+    # A heavier, slightly larger title face improves mobile readability and OCR.
+    for name in ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                 "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf"):
+        if Path(name).exists():
+            return ImageFont.truetype(name, size=size)
+    return load_font(size)
 
 
 def draw_scene(profile: dict, beat_index: int, output: Path, include_text: bool = True) -> None:
@@ -196,7 +211,7 @@ def draw_scene(profile: dict, beat_index: int, output: Path, include_text: bool 
         d.line((135, 650, 585, 650), fill=(36, 26, 20, 255), width=8)
         d.ellipse((330, 635, 390, 695), fill=(125, 35, 38, 255), outline=gold, width=5)
         d.polygon([(460, 735), (520, 710), (560, 790), (490, 810)], fill=(218, 204, 177, 245))
-    elif key in ("photo_archive", "records_room", "courthouse"):
+    elif key == "photo_archive":
         d.rectangle((70, 190, 650, 1030), fill=(42, 40, 37, 220), outline=gold, width=4)
         for i in range(4):
             y = 290 + i * 160
@@ -204,6 +219,27 @@ def draw_scene(profile: dict, beat_index: int, output: Path, include_text: bool 
             for j in range(4):
                 x = 125 + j * 120
                 d.rectangle((x, y + 20, x + 72, y + 90), fill=(218, 205, 178, 230), outline=(82, 68, 50, 255), width=2)
+    elif key == "records_room":
+        # Low filing cabinets, a broad certificate table, and labeled record drawers.
+        d.rectangle((45, 220, 675, 910), fill=(48, 47, 43, 245), outline=gold, width=5)
+        for row in range(3):
+            y = 300 + row * 190
+            d.rectangle((75, y, 645, y + 145), fill=(83, 78, 66, 255), outline=gold, width=3)
+            for col in range(5):
+                x = 90 + col * 108
+                d.rectangle((x, y + 20, x + 92, y + 118), fill=(190, 176, 145, 255), outline=(40, 37, 32, 255), width=2)
+                d.ellipse((x + 38, y + 70, x + 54, y + 86), fill=(46, 43, 37, 255))
+        d.polygon([(145, 960), (545, 900), (620, 1040), (205, 1100)], fill=(222, 211, 185, 245), outline=gold)
+        d.rectangle((270, 935, 450, 1015), outline=(95, 62, 40, 255), width=4)
+    elif key == "courthouse":
+        # Public records hall: pillars and a long bench, visibly unlike archive shelving.
+        for x in (85, 270, 455, 640):
+            d.rectangle((x, 160, x + 45, 840), fill=(122, 116, 99, 210), outline=gold, width=3)
+            d.rectangle((x - 12, 150, x + 57, 190), fill=(171, 158, 129, 245), outline=gold, width=3)
+            d.rectangle((x - 12, 810, x + 57, 850), fill=(171, 158, 129, 245), outline=gold, width=3)
+        d.rectangle((65, 875, 655, 970), fill=(91, 72, 53, 255), outline=gold, width=4)
+        d.rectangle((145, 1000, 575, 1085), fill=(217, 207, 184, 245), outline=gold, width=3)
+        d.line((185, 1015, 535, 1015), fill=(88, 65, 45, 255), width=3)
     elif key == "locked_room":
         d.rectangle((100, 190, 620, 1050), fill=(30, 31, 36, 255), outline=gold, width=6)
         d.ellipse((535, 565, 560, 590), fill=gold)
@@ -244,12 +280,13 @@ def draw_scene(profile: dict, beat_index: int, output: Path, include_text: bool 
     # Text is rendered on a separate transparent layer after background crossfades.
     if include_text:
         small = load_font(21)
-        title_font = load_font(34)
+        title_font = load_title_font(38)
         body_font = load_font(24)
         d.text((WIDTH // 2, 95), f'{profile["episode"]}  •  {profile["place"]}',
                font=small, fill=(239, 224, 190, 255), anchor="mm")
+        d.rectangle((70, 130, 650, 210), fill=(8, 10, 12, 220), outline=(184, 151, 91, 255), width=2)
         d.text((WIDTH // 2, 170), BEATS[beat_index][0], font=title_font,
-               fill=(255, 248, 226, 255), anchor="mm", stroke_width=2, stroke_fill=(0, 0, 0, 220))
+               fill=(255, 248, 226, 255), anchor="mm", stroke_width=1, stroke_fill=(0, 0, 0, 220))
         story_line = [profile["title"], profile["hook"], profile["body"],
                       "A clue changes the scene.", "The pieces finally connect.", "One choice remains."][beat_index]
         story_line = re.sub(r"\s+", " ", story_line).strip()[:100]
@@ -263,12 +300,14 @@ def draw_text_overlay(profile: dict, beat_index: int, output: Path) -> None:
     """Render captions separately so xfade never blends outgoing and incoming text."""
     im = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
-    small, title_font, body_font = load_font(21), load_font(34), load_font(24)
+    small, title_font, body_font = load_font(21), load_title_font(38), load_font(24)
     d.text((WIDTH // 2, 95), f'{profile["episode"]}  •  {profile["place"]}',
            font=small, fill=(239, 224, 190, 255), anchor="mm",
            stroke_width=1, stroke_fill=(0, 0, 0, 220))
+    # Dark contrast banner keeps titles readable on bright sets and reduces OCR misses.
+    d.rectangle((70, 130, 650, 210), fill=(8, 10, 12, 220), outline=(184, 151, 91, 255), width=2)
     d.text((WIDTH // 2, 170), BEATS[beat_index][0], font=title_font,
-           fill=(255, 248, 226, 255), anchor="mm", stroke_width=2,
+           fill=(255, 248, 226, 255), anchor="mm", stroke_width=1,
            stroke_fill=(0, 0, 0, 220))
     story_line = [profile["title"], profile["hook"], profile["body"],
                   "A clue changes the scene.", "The pieces finally connect.", "One choice remains."][beat_index]

@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - fix/the-envelope-story-remediation-20261024
+      - fix/the-envelope-visual-diversity-20261025
     paths:
       - "rendering/the_envelope_story_remediation.py"
       - "rendering/test_the_envelope_story_remediation.py"
@@ -155,6 +156,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: the-envelope-30-episode-story-remediation-evidence
-          path: evidence/
+          # Explicit paths prevent stale legacy manifests in the checkout from leaking
+          # into the release artifact. Package only the freshly generated evidence.
+          path: |
+            evidence/manifest.json
+            evidence/episodes/EP*_60s_STORY_REMEDIATED.mp4
+            evidence/episodes/EP??_qa.json
+            evidence/episodes/EP??_contact_sheet.png
+            evidence/episodes/EP??_60s_STORY_REMEDIATED_transition_qa.json
           if-no-files-found: error
           retention-days: 14
