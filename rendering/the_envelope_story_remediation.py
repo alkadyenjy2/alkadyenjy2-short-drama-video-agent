@@ -152,6 +152,15 @@ def load_font(size: int):
     return ImageFont.load_default()
 
 
+def load_title_font(size: int):
+    # A heavier, slightly larger title face improves mobile readability and OCR.
+    for name in ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                 "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf"):
+        if Path(name).exists():
+            return ImageFont.truetype(name, size=size)
+    return load_font(size)
+
+
 def draw_scene(profile: dict, beat_index: int, output: Path, include_text: bool = True) -> None:
     """Draw location-specific geometry and story props for one beat."""
     base = profile["palette"]
@@ -271,12 +280,12 @@ def draw_scene(profile: dict, beat_index: int, output: Path, include_text: bool 
     # Text is rendered on a separate transparent layer after background crossfades.
     if include_text:
         small = load_font(21)
-        title_font = load_font(34)
+        title_font = load_title_font(38)
         body_font = load_font(24)
         d.text((WIDTH // 2, 95), f'{profile["episode"]}  •  {profile["place"]}',
                font=small, fill=(239, 224, 190, 255), anchor="mm")
         d.text((WIDTH // 2, 170), BEATS[beat_index][0], font=title_font,
-               fill=(255, 248, 226, 255), anchor="mm", stroke_width=2, stroke_fill=(0, 0, 0, 220))
+               fill=(255, 248, 226, 255), anchor="mm", stroke_width=1, stroke_fill=(0, 0, 0, 220))
         story_line = [profile["title"], profile["hook"], profile["body"],
                       "A clue changes the scene.", "The pieces finally connect.", "One choice remains."][beat_index]
         story_line = re.sub(r"\s+", " ", story_line).strip()[:100]
@@ -290,7 +299,7 @@ def draw_text_overlay(profile: dict, beat_index: int, output: Path) -> None:
     """Render captions separately so xfade never blends outgoing and incoming text."""
     im = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
-    small, title_font, body_font = load_font(21), load_font(34), load_font(24)
+    small, title_font, body_font = load_font(21), load_title_font(38), load_font(24)
     d.text((WIDTH // 2, 95), f'{profile["episode"]}  •  {profile["place"]}',
            font=small, fill=(239, 224, 190, 255), anchor="mm",
            stroke_width=1, stroke_fill=(0, 0, 0, 220))
