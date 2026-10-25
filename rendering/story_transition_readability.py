@@ -17,7 +17,7 @@ TRANSITION = 0.6
 SCENES_PER_EPISODE = 6
 CLIP_SECONDS = 60.0 / SCENES_PER_EPISODE + TRANSITION * (SCENES_PER_EPISODE - 1) / SCENES_PER_EPISODE
 STEP_SECONDS = CLIP_SECONDS - TRANSITION
-POST_TRANSITION_SETTLE = 1.0
+POST_TRANSITION_SETTLE = 2.0
 BEAT_NAMES = [
     "WIDE ESTABLISHING",
     "THE OBJECT",
@@ -60,7 +60,7 @@ def transition_text_pass(ocr_text: str, previous_scene: str, current_scene: str)
 
 
 def transition_sample_timestamp(index: int) -> float:
-    """Sample after the 0.6s background crossfade and 0.3s title fade-in settle."""
+    """Sample after the 0.6s crossfade plus a 2s settling window for robust OCR."""
     if not 1 <= index < SCENES_PER_EPISODE:
         raise ValueError(f"Transition index must be in 1..{SCENES_PER_EPISODE - 1}, got {index}")
     return index * STEP_SECONDS + TRANSITION + POST_TRANSITION_SETTLE
