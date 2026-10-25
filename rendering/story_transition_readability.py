@@ -59,7 +59,9 @@ def approximately_contains(expected: str, observed: str, threshold: float = 0.75
         upper_size = min(len(word) + 2, len(source))
         for start in range(len(source)):
             for size in range(lower_size, min(upper_size, len(source) - start) + 1):
-                if SequenceMatcher(None, word, source[start:start + size]).ratio() >= threshold:
+                # A stricter floor avoids accepting a neighboring but wrong word
+                # (e.g. "REACTION" as "REVEAL") while still allowing REVEAR -> REVEAL.
+                if SequenceMatcher(None, word, source[start:start + size]).ratio() >= max(threshold, 0.82):
                     return True
     return False
 
