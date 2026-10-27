@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Manual, evidence-first YouTube trend scan for GitHub Actions.
 
-Requires YOUTUBE_DATA_API_KEY in the repository Actions secrets.
-Writes JSON and PASS/FAIL logs only; does not publish content or schedule runs.
+Requires YOUTUBE_DATA_API_KEY in repository Actions secrets.
+Writes JSON and PASS/FAIL logs only; never publishes content or schedules runs.
 """
 import json
 import os
@@ -10,7 +10,7 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from source_adapters import AdapterAccessError, YouTubeDiscoveryAdapter
+from source_adapters import YouTubeDiscoveryAdapter
 from trend_intelligence import rank_trends
 
 OUT = Path("build/trend-scan")
@@ -38,6 +38,7 @@ def main() -> int:
         return fail("YOUTUBE_DATA_API_KEY secret is missing")
     now = datetime.now(timezone.utc)
     published_after = (now - timedelta(days=7)).isoformat().replace("+00:00", "Z")
+    region = os.getenv("TREND_REGION_CODE", "US").upper()
     adapter = YouTubeDiscoveryAdapter()
     queries = ["short drama", "vertical drama", "micro drama"]
     observations = []
@@ -45,22 +46,17 @@ def main() -> int:
         for query in queries:
             observations.extend(adapter.discover(
                 query=query, published_after=published_after,
-                region_code="US", max_results=25,
+                region_code=region, max_results=25,
             ))
     except Exception as exc:
         return fail(f"source request failed: {type(exc).__name__}: {exc}")
 
-    cutoff = now - timedelta(days=7)
-    valid = []
-    for item in observations:
-        try:
-            published = datetime.fromisoformat(item.observed_at.replace("Z", "+00:00"))
-            # observed_at is fetch time, so use age_hours for the publication window.
-            if item.title.strip() and item.source_url.startswith("https://www.youtube.com/watch?v=") and item.age_hours <= 168:
-                valid.append(item)
-        except Exception:
-            continue
-
+    valid = [
+        item for item in observations
+        if item.title.strip()
+        and item.source_url.startswith("https://www.youtube.com/watch?v=")
+        and 0 <= item.age_hours <= 168
+    ]
     ranked = rank_trends(valid, limit=50)
     if not ranked:
         return fail("No qualifying YouTube videos returned in the seven-day window")
@@ -68,6 +64,7 @@ def main() -> int:
     payload = {
         "status": "PASS",
         "source": "YouTube Data API v3",
+        "regionCode": region,
         "generatedAt": now.isoformat(),
         "windowDays": 7,
         "count": len(ranked),
@@ -81,9 +78,12 @@ def main() -> int:
     json.loads(temp.read_text(encoding="utf-8"))
     temp.replace(output)
     reread = json.loads(output.read_text(encoding="utf-8"))
-    if reread.get("status") != "PASS" or reread.get("count", 0) != len(reread.get("items", [])) or not reread.get("items"):
+    if (reread.get("status") != "PASS"
+            or reread.get("count", 0) != len(reread.get("items", []))
+            or not reread.get("items")
+            or not reread.get("generatedAt")):
         return fail("Read-back verification failed")
-    log(f"PASS count={reread['count']} output={output.as_posix()}")
+    log(f"PASS count={reread['count']} region={region} output={output.as_posix()}")
     print(json.dumps({"status": "PASS", "count": reread["count"], "output": output.as_posix(), "generatedAt": reread["generatedAt"]}))
     return 0
 
